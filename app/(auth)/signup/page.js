@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { theme } from '@/constants/colors'
 
 export default function SignupPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [form, setForm] = useState({
     full_name: '',
     username: '',
@@ -20,6 +19,7 @@ export default function SignupPage() {
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError('')
+    setSuccess('')
   }
 
   async function handleSubmit(e) {
@@ -41,9 +41,9 @@ export default function SignupPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: form.full_name,
-          username: form.username,
-          email: form.email,
+          full_name: form.full_name.trim(),
+          username: form.username.trim(),
+          email: form.email.trim(),
           password: form.password,
         }),
       })
@@ -54,8 +54,12 @@ export default function SignupPage() {
         return
       }
 
-      router.push('/dashboard')
-      router.refresh()
+      if (data.requiresEmailConfirmation) {
+        setSuccess(data.message || 'Account created. Please check your email to confirm it before logging in.')
+        return
+      }
+
+      window.location.replace('/dashboard')
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -143,6 +147,20 @@ export default function SignupPage() {
               marginBottom: '20px',
             }}>
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div style={{
+              background: theme.bg.emeraldSoft,
+              border: `1px solid ${theme.border.light}`,
+              color: theme.text.emerald,
+              padding: '12px 16px',
+              borderRadius: '10px',
+              fontSize: '14px',
+              marginBottom: '20px',
+            }}>
+              {success}
             </div>
           )}
 
