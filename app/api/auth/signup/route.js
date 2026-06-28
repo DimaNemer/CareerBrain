@@ -99,9 +99,12 @@ import { NextResponse } from 'next/server'
 export async function POST(request) {
   try {
     const { full_name, username, email, password } = await request.json()
+    const normalizedFullName = full_name?.trim()
+    const normalizedUsername = username?.trim().toLowerCase()
+    const normalizedEmail = email?.trim().toLowerCase()
 
     // Validation
-    if (!full_name || !username || !email || !password) {
+    if (!normalizedFullName || !normalizedUsername || !normalizedEmail || !password) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
@@ -116,7 +119,7 @@ export async function POST(request) {
     }
 
     const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/
-    if (!usernameRegex.test(username)) {
+    if (!usernameRegex.test(normalizedUsername)) {
       return NextResponse.json(
         { error: 'Username must be 3–30 characters, letters/numbers/underscores only' },
         { status: 400 }
@@ -129,7 +132,7 @@ export async function POST(request) {
     const { data: existingUsername } = await supabase
       .from('profiles')
       .select('id')
-      .eq('username', username.toLowerCase())
+      .eq('username', normalizedUsername)
       .maybeSingle()
 
     if (existingUsername) {
@@ -140,13 +143,13 @@ export async function POST(request) {
     }
 
     // Create auth user — trigger automatically creates the profile row
-    const { error: authError } = await supabase.auth.signUp({
-      email,
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: normalizedEmail,
       password,
       options: {
         data: {
-          full_name,
-          username: username.toLowerCase(),
+          full_name: normalizedFullName,
+          username: normalizedUsername,
         },
       },
     })
@@ -159,7 +162,12 @@ export async function POST(request) {
     }
 
     return NextResponse.json(
-      { message: 'Account created successfully' },
+      {
+        message: authData?.session
+          ? 'Account created successfully'
+          : 'Account created. Please check your email to confirm it before logging in.',
+        requiresEmailConfirmation: !authData?.session,
+      },
       { status: 201 }
     )
   } catch {

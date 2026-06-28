@@ -66,8 +66,9 @@ export async function POST(request) {
     }
 
     const { email, password } = await request.json()
+    const normalizedEmail = email?.trim().toLowerCase()
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
@@ -77,11 +78,18 @@ export async function POST(request) {
     const supabase = await createClient()
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     })
 
     if (error) {
+      if (error.message === 'Email not confirmed') {
+        return NextResponse.json(
+          { error: 'Please confirm your email before logging in.' },
+          { status: 403 }
+        )
+      }
+
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
