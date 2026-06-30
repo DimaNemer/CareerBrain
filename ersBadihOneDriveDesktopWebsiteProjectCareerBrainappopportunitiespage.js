@@ -1,0 +1,24 @@
+*   [33m59ce634[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/career-brainEngine[m[33m)[m Opportunities_skills which show the matching user skills with active jobs
+[31m|[m[32m\[m  
+[31m|[m *   [33m025e3b4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #4 from DimaNemer/feature/onborading
+[31m|[m [33m|[m[34m\[m  
+[31m|[m [33m|[m * [33m9cb5795[m[33m ([m[1;31morigin/feature/onborading[m[33m)[m forget and reset pass process
+* [33m|[m [34m|[m [33m5b6617a[m My Changes
+[33m|[m[33m/[m [34m/[m  
+* [34m|[m   [33m0b71b58[m Merge pull request #2 from DimaNemer/collabspace-projects
+[35m|[m[36m\[m [34m\[m  
+[35m|[m * [34m|[m [33mfd0c2dc[m[33m ([m[1;31morigin/collabspace-projects[m[33m)[m Implement CollabSpace project management
+[35m|[m[35m/[m [34m/[m  
+[35m|[m [34m|[m * [33m5dd1193[m[33m ([m[1;31morigin/feature/career-brainEngine[m[33m)[m Opportunities task done
+[35m|[m [34m|[m[35m/[m  
+[35m|[m[35m/[m[34m|[m   
+* [34m|[m [33m3fe668f[m[33m ([m[1;32mmain[m[33m)[m Merge pull request #1 from DimaNemer/feature/onborading
+[1;32m|[m[34m\[m[34m|[m 
+[1;32m|[m * [33m8133229[m onboarding feature done
+[1;32m|[m[1;32m/[m  
+*   [33m641c1dc[m first upload
+[1;34m|[m[1;35m\[m  
+[1;34m|[m * [33m5d855fa[m Expand README with Career Brain platform details
+[1;34m|[m * [33m8a618eb[m Initial commit
+* [33md9b147e[m First Upload
+* [33m1646f70[m Initial commit from Create Next App

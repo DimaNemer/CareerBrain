@@ -13,6 +13,8 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@xenova/transformers": "^2.17.2",
+    "bullmq": "^5.79.2",
+    "ioredis": "^5.11.1",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4"

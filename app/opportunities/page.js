@@ -46,6 +46,14 @@ function getDaysAgo(dateString) {
   }
 }
 
+// Color matching badges based on calculated precision metrics
+function getScoreStyles(score) {
+  const percentage = Math.round(score * 100);
+  if (percentage >= 80) return { bg: '#d1fae5', text: '#065f46', border: '#a7f3d0', label: 'Excellent Fit' };
+  if (percentage >= 50) return { bg: '#ffedd5', text: '#9a3412', border: '#fed7aa', label: 'Good Match' };
+  return { bg: '#f3f4f6', text: '#374151', border: '#e5e7eb', label: 'Potential Fit' };
+}
+
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState([])
   const [filteredJobs, setFilteredJobs] = useState([])
@@ -60,6 +68,7 @@ export default function OpportunitiesPage() {
   const dropdownRef = useRef(null)
   const router = useRouter()
 
+  // Pulls data pre-calculated with match scores and relational gaps
   const fetchJobs = async () => {
     try {
       const res = await fetch('/api/opportunities')
@@ -116,10 +125,15 @@ export default function OpportunitiesPage() {
     if (syncing) return
     setSyncing(true)
     try {
+      // 1. Sync live data arrays
       const res = await fetch('/api/opportunities/sync', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Synchronization failed')
-      alert(data.message || 'Data successfully synchronized!')
+      
+      // 2. Compute background score calculations on completion instantly
+      await fetch('/api/match', { method: 'POST' });
+      
+      alert('Data and skill matching metrics synchronized successfully!')
       await fetchJobs()
     } catch (err) {
       alert(`Sync Error: ${err.message}`)
@@ -134,10 +148,10 @@ export default function OpportunitiesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: '32px', fontWeight: 700, color: theme?.text?.primary || '#111827', margin: '0 0 8px', letterSpacing: '-0.5px' }}>
-            Opportunities
+            Smart Dashboard
           </h1>
           <p style={{ fontSize: '16px', color: theme?.text?.secondary || '#4b5563', margin: 0 }}>
-            Browse live automated job postings matching your tech stacks.
+            Personalized vector calculations comparing your tech skills directly with incoming openings.
           </p>
         </div>
 
@@ -155,12 +169,12 @@ export default function OpportunitiesPage() {
             border: 'none',
             cursor: syncing ? 'not-allowed' : 'pointer',
             display: 'flex',
-            alignItems: 'center',
+            align_items: 'center',
             gap: '8px',
           }}
         >
           <span style={{ display: 'inline-block', animation: syncing ? 'spin 1s linear infinite' : 'none' }}>🔄</span>
-          {syncing ? 'Syncing Live Feeds...' : 'Sync Latest Jobs'}
+          {syncing ? 'Analyzing Matches...' : 'Sync & Match Jobs'}
         </button>
       </div>
 
@@ -199,39 +213,49 @@ export default function OpportunitiesPage() {
         </div>
       </div>
 
-      {loading && <p style={{ color: theme?.text?.secondary || '#4b5563' }}>Loading opportunities...</p>}
+      {loading && <p style={{ color: theme?.text?.secondary || '#4b5563' }}>Loading matching opportunities...</p>}
       {error && <div style={{ background: theme?.bg?.redSoft || '#fef2f2', border: `1px solid ${theme?.border?.light || '#e5e7eb'}`, borderRadius: '12px', padding: '16px', color: theme?.text?.red || '#ef4444', fontSize: '14px' }}>{error}</div>}
 
       {!loading && !error && filteredJobs.length === 0 && (
-        <div style={{ background: theme?.bg?.hover || '#f9fafb', border: `1px dashed ${theme?.border?.medium || '#d1d5db'}`, borderRadius: '16px', padding: '32px', textAlign: 'center', color: theme?.text?.tertiary || '#9ca3af', fontSize: '14px' }}>No entries found. Try syncing latest rows!</div>
+        <div style={{ background: theme?.bg?.hover || '#f9fafb', border: `1px dashed ${theme?.border?.medium || '#d1d5db'}`, borderRadius: '16px', padding: '32px', textAlign: 'center', color: theme?.text?.tertiary || '#9ca3af', fontSize: '14px' }}>No matches computed yet. Hit sync to evaluate your profile!</div>
       )}
 
       {!loading && !error && filteredJobs.length > 0 && (
-        <div style={{ display: 'grid', gap: '16px' }}>
+        <div style={{ display: 'grid', gap: '20px' }}>
           {filteredJobs.map(opportunity => {
-            if (!opportunity?.id) return null; // Safe guard against corrupt list objects
+            if (!opportunity?.id) return null;
 
             const safeApplyUrl = getSafeUrl(opportunity.application_url)
             const targetDate = opportunity.posted_at || opportunity.created_at
             const daysAgoText = getDaysAgo(targetDate)
-            const matchedSkills = Array.isArray(opportunity.opportunity_skills) ? opportunity.opportunity_skills : []
+            
+            // Extracted relational sub arrays from your schema models cleanly
+            const opportunitySkills = Array.isArray(opportunity.opportunity_skills) ? opportunity.opportunity_skills : []
+            const matchData = opportunity.match_results?.[0] || null;
+            const scoreMetrics = matchData ? getScoreStyles(matchData.match_score) : null;
+            const missingSkillsList = matchData?.missing_skills || [];
 
             return (
-              <article key={opportunity.id} style={{ background: theme?.bg?.card || '#ffffff', border: `1px solid ${theme?.border?.light || '#e5e7eb'}`, borderRadius: '16px', padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '12px' }}>
+              <article key={opportunity.id} style={{ background: theme?.bg?.card || '#ffffff', border: `1px solid ${theme?.border?.light || '#e5e7eb'}`, borderRadius: '16px', padding: '24px', transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '14px' }}>
                   <div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: theme?.text?.primary || '#111827', margin: '0 0 4px' }}>{opportunity.title}</h2>
-                    <p style={{ fontSize: '14px', color: theme?.text?.secondary || '#4b5563', margin: '0 0 4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                      <h2 style={{ fontSize: '20px', fontWeight: 700, color: theme?.text?.primary || '#111827', margin: 0 }}>{opportunity.title}</h2>
+                      
+                      {/* Render Score Pill Badge dynamically if calculations exist */}
+                      {scoreMetrics && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: scoreMetrics.bg, color: scoreMetrics.text, border: `1px solid ${scoreMetrics.border}`, padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
+                          🎯 {Math.round(matchData.match_score * 100)}% Match ({scoreMetrics.label})
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p style={{ fontSize: '14px', color: theme?.text?.secondary || '#4b5563', margin: '0' }}>
                       {opportunity.company || 'Unknown Company'}{opportunity.location ? ` · ${opportunity.location}` : ''}
                     </p>
-                    
-                    {daysAgoText && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '6px' }}>
-                        <span style={{ fontSize: '10px', textTransform: 'uppercase', color: '#9ca3af', fontWeight: 700, letterSpacing: '0.5px' }}>Posted</span>
-                        <span style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>{daysAgoText}</span>
-                      </div>
-                    )}
                   </div>
+                  
                   {opportunity.opportunity_type && (
                     <span style={{ background: theme?.bg?.emeraldSoft || '#ecfdf5', color: theme?.text?.emerald || '#059669', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', fontWeight: 600 }}>{opportunity.opportunity_type}</span>
                   )}
@@ -239,42 +263,56 @@ export default function OpportunitiesPage() {
 
                 {opportunity.description && <p style={{ fontSize: '14px', color: theme?.text?.secondary || '#4b5563', lineHeight: 1.6, margin: '0 0 16px' }}>{opportunity.description}</p>}
 
-                {matchedSkills.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px', paddingTop: '4px' }}>
-                    {matchedSkills.map((link, idx) => {
-                      if (!link) return null;
-                      const skillName = link.skills?.name || 'Unknown Skill'
-                      const isMandatory = !!link.is_mandatory;
-                      const weight = link.importance_weight ?? 1;
+                {/* Requirements Layout Sections split by Match vs Missing tags */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                  
+                  {/* Row 1: Target Skills required by this Role */}
+                  {opportunitySkills.length > 0 && (
+                    <div>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#6b7280', fontWeight: 700, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Role Requirements</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {opportunitySkills.map((link, idx) => {
+                          if (!link) return null;
+                          return (
+                            <span key={idx} style={{ fontSize: '12px', fontWeight: 500, padding: '3px 8px', borderRadius: '6px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              {link.skills?.name || 'Skill'} 
+                              <span style={{ fontSize: '10px', opacity: 0.6 }}>W:{link.importance_weight}</span>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-                      return (
-                        <span 
-                          key={idx}
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            background: isMandatory ? '#fee2e2' : '#f3f4f6',
-                            color: isMandatory ? '#ef4444' : '#4b5563',
-                            border: isMandatory ? '1px solid #fca5a5' : '1px solid #e5e7eb',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          {skillName}
-                          <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: 700, background: isMandatory ? '#fca5a5' : '#e5e7eb', padding: '1px 4px', borderRadius: '4px', color: '#1f2937' }}>
-                            W:{weight}
+                  {/* Row 2: Red Tag Gaps extracted via missing_skills schema join arrays */}
+                  {missingSkillsList.length > 0 && (
+                    <div style={{ background: '#fff5f5', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                      <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#c53030', fontWeight: 700, letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>Missing Skills to Study</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {missingSkillsList.map((gap) => (
+                          <span key={gap.id} style={{ fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '6px', background: '#fff', color: '#e53e3e', border: '1px dashed #f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            ⚠️ {gap.skills?.name || 'Required Skill'}
                           </span>
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingTop: '12px', borderTop: `1px solid ${theme?.border?.light || '#f3f4f6'}` }}>
-                  {opportunity.source && <span style={{ fontSize: '12px', color: theme?.text?.tertiary || '#9ca3af', fontWeight: 500 }}>Source: {opportunity.source}</span>}
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    {daysAgoText && (
+                      <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                        🕒 {daysAgoText}
+                      </span>
+                    )}
+                    {matchData?.estimated_time_to_close && (
+                      <span style={{ fontSize: '13px', color: '#2563eb', fontWeight: 500 }}>
+                        ⏱️ Roadmap: {matchData.estimated_time_to_close}
+                      </span>
+                    )}
+                  </div>
+
                   {safeApplyUrl && (
                     <a href={safeApplyUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: theme?.action?.primary || '#2563eb', color: theme?.action?.primaryText || '#ffffff', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}>Apply Now</a>
                   )}

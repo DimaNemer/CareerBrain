@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 
+// 🔥 THE UI FIX: Forces Next.js to fetch live data instead of showing a frozen cache
+export const dynamic = 'force-dynamic'
+
 /**
- * GET Handler - Retrieves all opportunities with linked semantic skill badges.
- * Securely enforces server-side authentication gates.
+ * GET Handler - Retrieves all opportunities with match scores and skill gaps.
  */
 export async function GET() {
   try {
@@ -18,7 +20,7 @@ export async function GET() {
       )
     }
 
-    // 2. Fetch all jobs and join relational skill badges through the bridge table
+    // 2. 🔥 UPDATED QUERY: Added match_results and missing_skills back into the selector
     const { data: opportunities, error: queryError } = await supabase
       .from('opportunities')
       .select(`
@@ -37,6 +39,16 @@ export async function GET() {
           is_mandatory,
           skills (
             name
+          )
+        ),
+        match_results (
+          match_score,
+          estimated_time_to_close,
+          missing_skills (
+            id,
+            skills (
+              name
+            )
           )
         )
       `)
@@ -60,5 +72,5 @@ export async function GET() {
       { error: 'Internal Server Error' }, 
       { status: 500 }
     )
-  }
+  }   
 }
