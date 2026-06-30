@@ -71,6 +71,7 @@ export default async function RootLayout({ children }) {
           {/* Nav links */}
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <NavLink href="/upload-cv">Upload CV</NavLink>
               <NavLink href="/opportunities">Jobs</NavLink>
               <NavLink href="/projects">Projects</NavLink>
               <NavLink href="/profile">Profile</NavLink>
