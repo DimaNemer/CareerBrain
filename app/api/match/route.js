@@ -5,13 +5,12 @@ export async function POST() {
   try {
     const supabase = await createClient()
 
-    // 1. Enforce strict server-side authentication
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized profile request rejected' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // 2. Trigger lightning fast localized database calculation
     const { error: rpcError } = await supabase.rpc('calculate_user_job_matches', {

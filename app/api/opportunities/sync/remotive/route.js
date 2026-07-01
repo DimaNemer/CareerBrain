@@ -11,14 +11,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized access denied' }, { status: 401 })
     }
 
-    // 2. Fetch external feeds (Adzuna)
-    const adzunaUrl = new URL('https://api.adzuna.com/v1/api/jobs/gb/search/1')
-    adzunaUrl.searchParams.set('app_id', process.env.ADZUNA_APP_ID)
-    adzunaUrl.searchParams.set('app_key', process.env.ADZUNA_APP_KEY)
-    adzunaUrl.searchParams.set('results_per_page', '10')
-    adzunaUrl.searchParams.set('content-type', 'application/json')
-
-    const apiResponse = await fetch(adzunaUrl.toString(), {
+    const apiResponse = await fetch('https://remotive.com/api/remote-jobs?limit=10', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 0 }
@@ -27,39 +20,30 @@ export async function POST(request) {
     if (!apiResponse.ok) throw new Error('External API service unavailable')
     
     const data = await apiResponse.json()
-    const externalJobs = (data.results || []).slice(0, 10)
+    const externalJobs = (data.jobs || []).slice(0, 10)
 
     if (externalJobs.length === 0) {
       return NextResponse.json({ message: 'No jobs found to sync' }, { status: 200 })
     }
 
-    // 3. Clean raw fields
     const formattedJobs = externalJobs.map(job => {
       const cleanDescription = job.description 
         ? job.description.replace(/<[^>]*>/g, '').substring(0, 500) + '...'
         : 'No description provided.'
 
-      const typeMap = {
-        'full_time': 'Full-time',
-        'part_time': 'Part-time',
-        'contract': 'Contract',
-        'permanent': 'Permanent',
-        'internship': 'Internship',
-      }
-
       return {
         title: job.title || 'Untitled Position',
-        company: job.company?.display_name || 'Anonymous Company',
-        location: job.location?.display_name || 'Remote',
-        opportunity_type: typeMap[job.contract_type] || job.contract_type || 'Full-time',
+        company: job.company_name || 'Anonymous Company',
+        location: job.candidate_required_location || 'Remote',
+        opportunity_type: job.job_type || 'Full-time',
         description: cleanDescription,
-        application_url: job.redirect_url || '',
-        source: 'Adzuna',
-        posted_at: job.created || null
+        application_url: job.url || '',
+        source: 'Remotive',
+        posted_at: job.publication_date || null
       }
     })
 
-    // 4. Deduplicate against existing jobs (match by title + company)
+    // Deduplicate against existing jobs (match by title + company)
     const uniqueTitles = [...new Set(formattedJobs.map(j => j.title))]
     const { data: existing } = await supabase
       .from('opportunities')
@@ -70,10 +54,9 @@ export async function POST(request) {
     const newJobs = formattedJobs.filter(j => !existingKeys.has(`${j.title}|${j.company}`))
 
     if (newJobs.length === 0) {
-      return NextResponse.json({ message: 'No new jobs to sync (all already exist)' }, { status: 200 })
+      return NextResponse.json({ message: 'No new remote jobs to sync (all already exist)' }, { status: 200 })
     }
 
-    // 5. Bulk Insertion
     const { data: insertedData, error: dbError } = await supabase
       .from('opportunities')
       .insert(newJobs)
@@ -84,7 +67,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 
-    // 5. 🔥 FIXED: Process jobs sequentially to eliminate Hugging Face "fetch failed" drops
     if (insertedData && insertedData.length > 0) {
       for (const job of insertedData) {
         try {
@@ -96,7 +78,7 @@ export async function POST(request) {
     }
 
     return NextResponse.json({
-      message: `Success! Synchronized ${insertedData?.length || 0} new opportunities.`,
+      message: `Success! Synchronized ${insertedData?.length || 0} new remote opportunities.`,
       jobsAdded: insertedData?.length || 0
     }, { status: 200 })
 
