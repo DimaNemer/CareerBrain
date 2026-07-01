@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# opencode config
+.agents/
+.opencode/
+
+# graphify generated output
+graphify-out/
+.graphifyignore
+
+# temp files
+temp-opportunities.html
+ersBadihOneDriveDesktopWebsiteProjectCareerBrainappopportunitiespage*
+
+# env files (expand for all variants)
+.env*
+!.env.example

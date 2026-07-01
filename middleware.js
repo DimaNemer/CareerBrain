@@ -6,6 +6,7 @@ const PROTECTED_ROUTES = [
   '/opportunities',
   '/projects',
   '/profile',
+  '/saved',
 ]
 
 const AUTH_ROUTES = ['/login', '/signup']

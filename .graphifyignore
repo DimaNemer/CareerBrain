@@ -1,0 +1,9 @@
+node_modules/
+*.md
+*.png
+*.jpg
+*.webp
+*.gif
+*.pdf
+*.docx
+*.xlsx
