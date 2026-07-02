@@ -62,8 +62,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Role title is required' }, { status: 400 })
     }
 
-    if (quantityNeeded < 1) {
-      return NextResponse.json({ error: 'Quantity must be at least 1' }, { status: 400 })
+    if (quantityNeeded < 0) {
+      return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
     }
 
     // Check that logged-in user owns the project

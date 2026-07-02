@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase-server'
 import DeleteProjectButton from './delete-project-button'
 import AddRoleForm from './add-role-form'
 import RoleActions from './role-actions'
+import RequestToJoinButton from './request-to-join-button'
+import JoinRequestActions from './join-request-actions'
+import MemberActions from './member-actions'
 
 export default async function ProjectDetailsPage({ params }) {
   const supabase = await createClient()
@@ -14,13 +17,7 @@ export default async function ProjectDetailsPage({ params }) {
 
   const { data: project, error } = await supabase
     .from('projects')
-    .select(`
-      *,
-      profiles (
-        full_name,
-        username
-      )
-    `)
+    .select(`*, profiles (full_name, username)`)
     .eq('id', id)
     .is('deleted_at', null)
     .single()
@@ -33,16 +30,11 @@ export default async function ProjectDetailsPage({ params }) {
     )
   }
 
+  const isOwner = user?.id === project.owner_id
+
   const { data: roles } = await supabase
     .from('project_roles')
-    .select(`
-      *,
-      skills (
-        id,
-        name,
-        category
-      )
-    `)
+    .select(`*, skills (id, name, category)`)
     .eq('project_id', id)
     .order('role_title', { ascending: true })
 
@@ -51,7 +43,58 @@ export default async function ProjectDetailsPage({ params }) {
     .select('id, name, category')
     .order('name', { ascending: true })
 
-  const isOwner = user?.id === project.owner_id
+  let userRequests = []
+  let joinRequests = []
+  let members = []
+  let isMember = false
+
+  if (user && !isOwner) {
+    const { data } = await supabase
+      .from('join_requests')
+      .select('id, project_role_id, status')
+      .eq('project_id', id)
+      .eq('user_id', user.id)
+
+    userRequests = data || []
+  }
+
+
+  if (isOwner) {
+    const { data } = await supabase
+      .from('join_requests')
+      .select(`
+        *,
+        profiles (id, username, full_name, avatar_url),
+        project_roles (
+          id,
+          role_title,
+          skills (id, name, category)
+        )
+      `)
+      .eq('project_id', id)
+      .order('created_at', { ascending: false })
+
+    joinRequests = data || []
+  }
+
+  const { data: projectMembers } = await supabase
+    .from('project_members')
+    .select(`*, profiles (id, full_name, username, avatar_url)`)
+    .eq('project_id', id)
+
+  members = projectMembers || []
+
+  if (!isOwner && user) {
+    isMember = members.some((member) => member.user_id === user.id)
+  }
+
+  const hasActiveRequestOrMembership = userRequests.some((request) =>
+  ['pending', 'accepted'].includes(request.status)
+)
+
+  function getRequestForRole(roleId) {
+    return userRequests.find((request) => request.project_role_id === roleId)
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 px-6 py-10">
@@ -82,22 +125,10 @@ export default async function ProjectDetailsPage({ params }) {
         </p>
 
         <div className="mt-8 space-y-2 border-t pt-6 text-sm text-gray-500">
-          <p>
-            <strong>Status:</strong> {project.status}
-          </p>
-
-          <p>
-            <strong>Owner:</strong> {project.profiles.full_name}
-          </p>
-
-          <p>
-            <strong>Username:</strong> {project.profiles.username}
-          </p>
-
-          <p>
-            <strong>Created:</strong>{' '}
-            {new Date(project.created_at).toLocaleString()}
-          </p>
+          <p><strong>Status:</strong> {project.status}</p>
+          <p><strong>Owner:</strong> {project.profiles.full_name}</p>
+          <p><strong>Username:</strong> {project.profiles.username}</p>
+          <p><strong>Created:</strong> {new Date(project.created_at).toLocaleString()}</p>
         </div>
 
         <section className="mt-10 border-t pt-8">
@@ -107,28 +138,153 @@ export default async function ProjectDetailsPage({ params }) {
             <p className="mt-3 text-gray-600">No roles added yet.</p>
           ) : (
             <div className="mt-5 space-y-4">
-              {roles.map((role) => (
-                <div key={role.id} className="rounded-xl border bg-gray-50 p-4">
-                  <h3 className="font-semibold text-gray-900">
-                    {role.role_title}
-                  </h3>
+              {roles.map((role) => {
+                const request = getRequestForRole(role.id)
 
-                  <p className="mt-1 text-sm text-gray-600">
-                    Skill: {role.skills?.name || 'No specific skill'}
-                  </p>
+                return (
+                  <div key={role.id} className="rounded-xl border bg-gray-50 p-4">
+                    <h3 className="font-semibold text-gray-900">{role.role_title}</h3>
 
-                  <p className="mt-1 text-sm text-gray-600">
-                    Quantity needed: {role.quantity_needed}
-                  </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Skill: {role.skills?.name || 'No specific skill'}
+                    </p>
 
-                  {isOwner && <RoleActions role={role} skills={skills || []} />}
-                </div>
-              ))}
+                    <p className="mt-1 text-sm text-gray-600">
+                      Quantity needed: {role.quantity_needed}
+                    </p>
+
+                    {isOwner && <RoleActions role={role} skills={skills || []} />}
+
+                    {!isOwner && request?.status === 'pending' && (
+                      <p className="mt-4 inline-block rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-700">
+                        Request Status: Pending
+                      </p>
+                    )}
+
+                    {!isOwner && request?.status === 'accepted' && (
+                      <p className="mt-4 inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                        Request Accepted
+                      </p>
+                    )}
+
+                    {!isOwner && request?.status === 'rejected' && (
+                      <p className="mt-4 inline-block rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+                        Request Rejected
+                      </p>
+                    )}
+
+                    {!isOwner && request?.status === 'left' && (
+                      <p className="mt-4 inline-block rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+                        You left this role
+                      </p>
+                    )}
+
+                    {!isOwner && request?.status === 'removed' && (
+                      <p className="mt-4 inline-block rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700">
+                        You were removed from this role
+                      </p>
+                    )}
+
+                    {!isOwner &&
+                     !request &&
+                     !hasActiveRequestOrMembership &&
+                     project.status === 'open' &&
+                     role.quantity_needed > 0 && (
+                     <RequestToJoinButton
+                     projectId={project.id}
+                     roleId={role.id}
+                     />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
           {isOwner && <AddRoleForm projectId={project.id} skills={skills || []} />}
         </section>
+
+        {isOwner && (
+          <section className="mt-10 border-t pt-8">
+            <h2 className="text-2xl font-bold text-gray-900">Join Requests</h2>
+
+            {joinRequests.length === 0 ? (
+              <p className="mt-3 text-gray-600">No join requests yet.</p>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {joinRequests.map((request) => (
+                  <div key={request.id} className="rounded-xl border bg-gray-50 p-4">
+                    <h3 className="font-semibold text-gray-900">
+                      {request.profiles?.full_name || 'Unknown user'}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      Username: {request.profiles?.username || '-'}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      Requested Role: {request.project_roles?.role_title || '-'}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      Skill: {request.project_roles?.skills?.name || 'No specific skill'}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      Message: {request.message || 'No message provided.'}
+                    </p>
+
+                    <p className="mt-1 text-sm text-gray-600">
+                      Status: {request.status}
+                    </p>
+
+                    {request.status === 'pending' && (
+                      <JoinRequestActions requestId={request.id} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {(isOwner || isMember) && (
+          <section className="mt-10 border-t pt-8">
+            <h2 className="text-2xl font-bold text-gray-900">Project Members</h2>
+
+            {members.length === 0 ? (
+              <p className="mt-3 text-gray-600">No members yet.</p>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {members.map((member) => (
+                  <div key={member.id} className="rounded-xl border bg-gray-50 p-4">
+                    <h3 className="font-semibold text-gray-900">
+                      {member.profiles?.full_name || 'Unknown member'}
+                    </h3>
+
+                    <p className="text-sm text-gray-600">
+                      @{member.profiles?.username || '-'}
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Role: {member.role_in_project}
+                    </p>
+
+                    <p className="text-sm text-gray-600">
+                      Joined: {new Date(member.joined_at).toLocaleDateString()}
+                    </p>
+
+                    <MemberActions
+                      memberId={member.id}
+                      isOwner={isOwner}
+                      isCurrentUser={user?.id === member.user_id}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </main>
   )

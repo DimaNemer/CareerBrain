@@ -69,8 +69,8 @@ export async function PUT(request, { params }) {
     if (body.quantity_needed !== undefined) {
       const quantityNeeded = Number(body.quantity_needed)
 
-      if (quantityNeeded < 1) {
-        return NextResponse.json({ error: 'Quantity must be at least 1' }, { status: 400 })
+      if (quantityNeeded < 0) {
+        return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
       }
 
       updates.quantity_needed = quantityNeeded
