@@ -135,6 +135,34 @@ export async function DELETE(request, { params }) {
       )
     }
 
+    const { data: activeRequests, error: activeRequestsError } = await supabase
+      .from('join_requests')
+      .select('id')
+      .eq('project_role_id', id)
+      .in('status', ['pending', 'accepted'])
+      .limit(1)
+
+    if (activeRequestsError) {
+      return NextResponse.json({ error: activeRequestsError.message }, { status: 500 })
+    }
+
+    if (activeRequests && activeRequests.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete this role because it has pending or accepted requests.' },
+        { status: 400 }
+      )
+    }
+
+    // Delete all old/inactive requests connected to this role
+    const { error: oldRequestsError } = await supabase
+      .from('join_requests')
+      .delete()
+      .eq('project_role_id', id)
+
+    if (oldRequestsError) {
+      return NextResponse.json({ error: oldRequestsError.message }, { status: 500 })
+    }
+
     const { error } = await supabase
       .from('project_roles')
       .delete()
