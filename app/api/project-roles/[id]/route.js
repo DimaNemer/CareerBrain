@@ -69,8 +69,8 @@ export async function PUT(request, { params }) {
     if (body.quantity_needed !== undefined) {
       const quantityNeeded = Number(body.quantity_needed)
 
-      if (quantityNeeded < 1) {
-        return NextResponse.json({ error: 'Quantity must be at least 1' }, { status: 400 })
+      if (quantityNeeded < 0) {
+        return NextResponse.json({ error: 'Quantity cannot be negative' }, { status: 400 })
       }
 
       updates.quantity_needed = quantityNeeded
@@ -133,6 +133,34 @@ export async function DELETE(request, { params }) {
         { error: 'Only the project owner can delete this role' },
         { status: 403 }
       )
+    }
+
+    const { data: activeRequests, error: activeRequestsError } = await supabase
+      .from('join_requests')
+      .select('id')
+      .eq('project_role_id', id)
+      .in('status', ['pending', 'accepted'])
+      .limit(1)
+
+    if (activeRequestsError) {
+      return NextResponse.json({ error: activeRequestsError.message }, { status: 500 })
+    }
+
+    if (activeRequests && activeRequests.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete this role because it has pending or accepted requests.' },
+        { status: 400 }
+      )
+    }
+
+    // Delete all old/inactive requests connected to this role
+    const { error: oldRequestsError } = await supabase
+      .from('join_requests')
+      .delete()
+      .eq('project_role_id', id)
+
+    if (oldRequestsError) {
+      return NextResponse.json({ error: oldRequestsError.message }, { status: 500 })
     }
 
     const { error } = await supabase

@@ -99,7 +99,7 @@ export default function AddRoleForm({ projectId, skills }) {
           </label>
           <input
             type="number"
-            min="1"
+            min="0"
             value={quantityNeeded}
             onChange={(e) => setQuantityNeeded(Number(e.target.value))}
             className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
