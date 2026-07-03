@@ -11,16 +11,28 @@ export default async function ProjectDetailsPage({ params }) {
   const supabase = await createClient()
   const { id } = await params
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select(`*, profiles (full_name, username)`)
-    .eq('id', id)
-    .is('deleted_at', null)
-    .single()
+  const [
+    {
+      data: { user },
+    },
+    { data: project, error },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('projects')
+      .select(`
+        id,
+        owner_id,
+        title,
+        description,
+        status,
+        created_at,
+        profiles (full_name, username)
+      `)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single(),
+  ])
 
   if (error || !project) {
     return (
@@ -32,35 +44,28 @@ export default async function ProjectDetailsPage({ params }) {
 
   const isOwner = user?.id === project.owner_id
 
-  const { data: roles } = await supabase
+  const rolesQuery = supabase
     .from('project_roles')
     .select(`*, skills (id, name, category)`)
     .eq('project_id', id)
     .order('role_title', { ascending: true })
 
-  const { data: skills } = await supabase
+  const skillsQuery = supabase
     .from('skills')
     .select('id, name, category')
     .order('name', { ascending: true })
 
-  let userRequests = []
-  let joinRequests = []
-  let members = []
-  let isMember = false
-
-  if (user && !isOwner) {
-    const { data } = await supabase
+  const userRequestsQuery =
+    user && !isOwner
+      ? supabase
       .from('join_requests')
       .select('id, project_role_id, status')
       .eq('project_id', id)
       .eq('user_id', user.id)
+      : Promise.resolve({ data: [] })
 
-    userRequests = data || []
-  }
-
-
-  if (isOwner) {
-    const { data } = await supabase
+  const joinRequestsQuery = isOwner
+    ? supabase
       .from('join_requests')
       .select(`
         *,
@@ -73,16 +78,31 @@ export default async function ProjectDetailsPage({ params }) {
       `)
       .eq('project_id', id)
       .order('created_at', { ascending: false })
+    : Promise.resolve({ data: [] })
 
-    joinRequests = data || []
-  }
-
-  const { data: projectMembers } = await supabase
+  const projectMembersQuery = supabase
     .from('project_members')
     .select(`*, profiles (id, full_name, username, avatar_url)`)
     .eq('project_id', id)
 
-  members = projectMembers || []
+  const [
+    { data: roles },
+    { data: skills },
+    { data: userRequestData },
+    { data: joinRequestData },
+    { data: projectMembers },
+  ] = await Promise.all([
+    rolesQuery,
+    skillsQuery,
+    userRequestsQuery,
+    joinRequestsQuery,
+    projectMembersQuery,
+  ])
+
+  const userRequests = userRequestData || []
+  const joinRequests = joinRequestData || []
+  const members = projectMembers || []
+  let isMember = false
 
   if (!isOwner && user) {
     isMember = members.some((member) => member.user_id === user.id)
