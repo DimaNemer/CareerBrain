@@ -6,15 +6,7 @@ export default async function ProjectsPage() {
 
   const { data: projects, error } = await supabase
     .from('projects')
-    .select(`
-      *,
-      profiles (
-        id,
-        username,
-        full_name,
-        avatar_url
-      )
-    `)
+    .select('id, title, description, status, created_at')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
