@@ -389,7 +389,10 @@ import { theme } from '@/constants/colors'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
@@ -415,13 +418,100 @@ export default async function ProfilePage() {
     .eq('id', user.id)
     .single()
 
+  const { data: myProjects } = await supabase
+    .from('projects')
+    .select('id, title, status, created_at')
+    .eq('owner_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  const { data: joinedProjects } = await supabase
+    .from('project_members')
+    .select(`
+      id,
+      role_in_project,
+      joined_at,
+      projects (
+        id,
+        title,
+        status,
+        deleted_at
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('joined_at', { ascending: false })
+
   const skills = profile?.user_skills || []
   const score = profile?.readiness_score || 0
+
+  const activeJoinedProjects =
+    joinedProjects?.filter((member) => member.projects && !member.projects.deleted_at) || []
 
   function scoreColor(s) {
     if (s >= 70) return theme.score.high
     if (s >= 40) return theme.score.medium
     return theme.score.low
+  }
+
+  function ProjectCard({ project, role, joinedAt }) {
+    return (
+      <div style={{
+        border: `1px solid ${theme.border.light}`,
+        borderRadius: '12px',
+        padding: '14px',
+        background: theme.bg.hover,
+      }}>
+        <h3 style={{
+          fontSize: '15px',
+          fontWeight: 600,
+          color: theme.text.primary,
+          margin: '0 0 6px',
+        }}>
+          {project.title}
+        </h3>
+
+        <p style={{
+          fontSize: '13px',
+          color: theme.text.secondary,
+          margin: '0 0 6px',
+        }}>
+          Status: {project.status}
+        </p>
+
+        {role && (
+          <p style={{
+            fontSize: '13px',
+            color: theme.text.secondary,
+            margin: '0 0 6px',
+          }}>
+            Role: {role}
+          </p>
+        )}
+
+        {joinedAt && (
+          <p style={{
+            fontSize: '13px',
+            color: theme.text.secondary,
+            margin: '0 0 12px',
+          }}>
+            Joined: {new Date(joinedAt).toLocaleDateString()}
+          </p>
+        )}
+
+        <Link href={`/projects/${project.id}`} style={{
+          display: 'inline-block',
+          padding: '7px 12px',
+          background: theme.action.primary,
+          color: theme.action.primaryText,
+          borderRadius: '8px',
+          fontSize: '13px',
+          fontWeight: 500,
+          textDecoration: 'none',
+        }}>
+          View Project
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -440,7 +530,6 @@ export default async function ProfilePage() {
         flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Avatar initials */}
           <div style={{
             width: '60px',
             height: '60px',
@@ -456,6 +545,7 @@ export default async function ProfilePage() {
           }}>
             {profile?.full_name?.[0]?.toUpperCase() || '?'}
           </div>
+
           <div>
             <h1 style={{
               fontSize: '20px',
@@ -466,6 +556,7 @@ export default async function ProfilePage() {
             }}>
               {profile?.full_name || 'Your Name'}
             </h1>
+
             {profile?.headline && (
               <p style={{
                 fontSize: '14px',
@@ -475,6 +566,7 @@ export default async function ProfilePage() {
                 {profile.headline}
               </p>
             )}
+
             {profile?.username && (
               <p style={{
                 fontSize: '13px',
@@ -523,6 +615,7 @@ export default async function ProfilePage() {
           }}>
             Readiness score
           </span>
+
           <span style={{
             fontSize: '26px',
             fontWeight: 700,
@@ -532,6 +625,7 @@ export default async function ProfilePage() {
             {score}%
           </span>
         </div>
+
         <div style={{
           height: '6px',
           background: theme.border.light,
@@ -545,6 +639,7 @@ export default async function ProfilePage() {
             borderRadius: '3px',
           }} />
         </div>
+
         {score === 0 && (
           <p style={{
             fontSize: '13px',
@@ -612,6 +707,7 @@ export default async function ProfilePage() {
         border: `1px solid ${theme.border.light}`,
         borderRadius: '16px',
         padding: '20px 24px',
+        marginBottom: '16px',
       }}>
         <h2 style={{
           fontSize: '14px',
@@ -641,6 +737,7 @@ export default async function ProfilePage() {
               🎓 {profile.university}{profile?.graduation_year ? ` · ${profile.graduation_year}` : ''}
             </span>
           )}
+
           {profile?.github_url && (
             <a href={profile.github_url} target="_blank" rel="noopener noreferrer" style={{
               fontSize: '13px',
@@ -650,6 +747,7 @@ export default async function ProfilePage() {
               💻 GitHub →
             </a>
           )}
+
           {profile?.linkedin_url && (
             <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" style={{
               fontSize: '13px',
@@ -659,6 +757,7 @@ export default async function ProfilePage() {
               🔗 LinkedIn →
             </a>
           )}
+
           {profile?.portfolio_url && (
             <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer" style={{
               fontSize: '13px',
@@ -670,6 +769,70 @@ export default async function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* My Projects */}
+      <section style={{
+        background: theme.bg.card,
+        border: `1px solid ${theme.border.light}`,
+        borderRadius: '16px',
+        padding: '20px 24px',
+        marginBottom: '16px',
+      }}>
+        <h2 style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: theme.text.primary,
+          margin: '0 0 16px',
+        }}>
+          My Projects
+        </h2>
+
+        {!myProjects || myProjects.length === 0 ? (
+          <p style={{ fontSize: '14px', color: theme.text.secondary, margin: 0 }}>
+            You have not created any projects yet.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {myProjects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Joined Projects */}
+      <section style={{
+        background: theme.bg.card,
+        border: `1px solid ${theme.border.light}`,
+        borderRadius: '16px',
+        padding: '20px 24px',
+      }}>
+        <h2 style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: theme.text.primary,
+          margin: '0 0 16px',
+        }}>
+          Joined Projects
+        </h2>
+
+        {activeJoinedProjects.length === 0 ? (
+          <p style={{ fontSize: '14px', color: theme.text.secondary, margin: 0 }}>
+            You have not joined any projects yet.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {activeJoinedProjects.map((member) => (
+              <ProjectCard
+                key={member.id}
+                project={member.projects}
+                role={member.role_in_project}
+                joinedAt={member.joined_at}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   )
 }

@@ -144,12 +144,23 @@ export default async function ProjectDetailsPage({ params }) {
           {project.description || 'No description provided.'}
         </p>
 
-        <div className="mt-8 space-y-2 border-t pt-6 text-sm text-gray-500">
-          <p><strong>Status:</strong> {project.status}</p>
-          <p><strong>Owner:</strong> {project.profiles.full_name}</p>
-          <p><strong>Username:</strong> {project.profiles.username}</p>
-          <p><strong>Created:</strong> {new Date(project.created_at).toLocaleString()}</p>
-        </div>
+       <div className="mt-8 space-y-2 border-t pt-6 text-sm text-gray-500">
+  <p><strong>Status:</strong> {project.status}</p>
+  <p><strong>Owner:</strong> {project.profiles.full_name}</p>
+  <p><strong>Username:</strong> {project.profiles.username}</p>
+  <p><strong>Created:</strong> {new Date(project.created_at).toLocaleString()}</p>
+
+  {(isOwner || isMember) && (
+    <div className="pt-4">
+      <Link
+        href={`/projects/${project.id}/workspace`}
+        className="inline-block rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+      >
+        Enter Workspace
+      </Link>
+    </div>
+  )}
+</div>
 
         <section className="mt-10 border-t pt-8">
           <h2 className="text-2xl font-bold text-gray-900">Roles Needed</h2>
