@@ -386,6 +386,7 @@ import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { theme } from '@/constants/colors'
+import { getProjectStatusLabel } from '@/lib/project-status'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -475,7 +476,7 @@ export default async function ProfilePage() {
           color: theme.text.secondary,
           margin: '0 0 6px',
         }}>
-          Status: {project.status}
+          Status: {getProjectStatusLabel(project.status)}
         </p>
 
         {role && (

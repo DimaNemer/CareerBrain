@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 
 export default function DeleteProjectButton({ projectId }) {
   const router = useRouter()
@@ -38,8 +39,9 @@ export default function DeleteProjectButton({ projectId }) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-60"
     >
+      <Trash2 size={16} />
       {loading ? 'Deleting...' : 'Delete Project'}
     </button>
   )

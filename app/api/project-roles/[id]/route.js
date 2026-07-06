@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
 import { NextResponse } from 'next/server'
 
 async function getRoleWithProject(supabase, roleId) {
@@ -83,6 +84,13 @@ export async function PUT(request, { params }) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { error: projectStatusError } =
+      await syncProjectStatusWithRoles(supabase, role.project_id)
+
+    if (projectStatusError) {
+      return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
     }
 
     const { data: updatedRole, error: fetchError } = await supabase
@@ -170,6 +178,13 @@ export async function DELETE(request, { params }) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { error: projectStatusError } =
+      await syncProjectStatusWithRoles(supabase, role.project_id)
+
+    if (projectStatusError) {
+      return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
     }
 
     return NextResponse.json({ message: 'Role deleted successfully' }, { status: 200 })

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Plus, UserPlus } from 'lucide-react'
 
 export default function AddRoleForm({ projectId, skills }) {
   const router = useRouter()
@@ -47,22 +48,32 @@ export default function AddRoleForm({ projectId, skills }) {
   }
 
   return (
-    <div className="mt-8 rounded-xl border bg-gray-50 p-5">
-      <h2 className="text-xl font-bold text-gray-900">Add Role</h2>
-
-      <p className="mt-1 text-sm text-gray-600">
-        Define a role needed for this project.
-      </p>
+    <div className="mt-7 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
+          <UserPlus size={18} />
+        </span>
+        <div>
+          <h2 className="font-bold text-slate-900">Add another role</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Define a position needed for this project.
+          </p>
+        </div>
+      </div>
 
       {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600">
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <AlertCircle size={16} />
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-5 grid gap-4 md:grid-cols-2"
+      >
+        <div className="md:col-span-2">
+          <label className="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
             Role Title
           </label>
           <input
@@ -70,19 +81,19 @@ export default function AddRoleForm({ projectId, skills }) {
             value={roleTitle}
             onChange={(e) => setRoleTitle(e.target.value)}
             placeholder="Example: Backend Developer"
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
             required
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
             Skill
           </label>
           <select
             value={skillId}
             onChange={(e) => setSkillId(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
           >
             <option value="">No specific skill</option>
             {skills.map((skill) => (
@@ -94,7 +105,7 @@ export default function AddRoleForm({ projectId, skills }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
             Quantity Needed
           </label>
           <input
@@ -102,18 +113,21 @@ export default function AddRoleForm({ projectId, skills }) {
             min="0"
             value={quantityNeeded}
             onChange={(e) => setQuantityNeeded(Number(e.target.value))}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-        >
-          {loading ? 'Adding...' : 'Add Role'}
-        </button>
+        <div className="md:col-span-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-60"
+          >
+            <Plus size={16} />
+            {loading ? 'Adding...' : 'Add Role'}
+          </button>
+        </div>
       </form>
     </div>
   )
