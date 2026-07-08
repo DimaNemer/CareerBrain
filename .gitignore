@@ -55,3 +55,6 @@ ersBadihOneDriveDesktopWebsiteProjectCareerBrainappopportunitiespage*
 # env files (expand for all variants)
 .env*
 !.env.example
+
+.env.example
+supabase/
