@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Pencil, Save, Trash2, X } from 'lucide-react'
 
 export default function RoleActions({ role, skills }) {
   const router = useRouter()
@@ -9,7 +10,7 @@ export default function RoleActions({ role, skills }) {
   const [isEditing, setIsEditing] = useState(false)
   const [roleTitle, setRoleTitle] = useState(role.role_title || '')
   const [skillId, setSkillId] = useState(role.skill_id || '')
-  const [quantityNeeded, setQuantityNeeded] = useState(role.quantity_needed || 1)
+  const [quantityNeeded, setQuantityNeeded] = useState(role.quantity_needed ?? 1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -64,9 +65,12 @@ export default function RoleActions({ role, skills }) {
 
   if (isEditing) {
     return (
-      <form onSubmit={handleUpdate} className="mt-4 space-y-3">
+      <form
+        onSubmit={handleUpdate}
+        className="mt-4 space-y-3 rounded-xl border border-indigo-100 bg-white p-4"
+      >
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -75,14 +79,14 @@ export default function RoleActions({ role, skills }) {
           type="text"
           value={roleTitle}
           onChange={(e) => setRoleTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
           required
         />
 
         <select
           value={skillId}
           onChange={(e) => setSkillId(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
         >
           <option value="">No specific skill</option>
           {skills.map((skill) => (
@@ -97,7 +101,7 @@ export default function RoleActions({ role, skills }) {
           min="0"
           value={quantityNeeded}
           onChange={(e) => setQuantityNeeded(Number(e.target.value))}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
           required
         />
 
@@ -105,16 +109,18 @@ export default function RoleActions({ role, skills }) {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
           >
+            <Save size={14} />
             {loading ? 'Saving...' : 'Save'}
           </button>
 
           <button
             type="button"
             onClick={() => setIsEditing(false)}
-            className="rounded-lg bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           >
+            <X size={14} />
             Cancel
           </button>
         </div>
@@ -123,19 +129,21 @@ export default function RoleActions({ role, skills }) {
   }
 
   return (
-    <div className="mt-4 flex gap-2">
+    <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
       <button
         onClick={() => setIsEditing(true)}
-        className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
       >
+        <Pencil size={13} />
         Edit
       </button>
 
       <button
         onClick={handleDelete}
         disabled={loading}
-        className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
       >
+        <Trash2 size={13} />
         {loading ? 'Deleting...' : 'Delete'}
       </button>
     </div>

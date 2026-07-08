@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request) {
@@ -52,7 +53,7 @@ export async function POST(request) {
     const projectId = body.project_id
     const roleTitle = body.role_title?.trim()
     const skillId = body.skill_id || null
-    const quantityNeeded = Number(body.quantity_needed || 1)
+    const quantityNeeded = Number(body.quantity_needed ?? 1)
 
     if (!projectId) {
       return NextResponse.json({ error: 'project_id is required' }, { status: 400 })
@@ -105,6 +106,13 @@ export async function POST(request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { error: projectStatusError } =
+      await syncProjectStatusWithRoles(supabase, projectId)
+
+    if (projectStatusError) {
+      return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
     }
 
     return NextResponse.json({ role }, { status: 201 })

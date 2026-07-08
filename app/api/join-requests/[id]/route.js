@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(request, { params }) {
@@ -107,6 +108,13 @@ export async function PATCH(request, { params }) {
 
     if (updateRoleError) {
       return NextResponse.json({ error: updateRoleError.message }, { status: 500 })
+    }
+
+    const { error: projectStatusError } =
+      await syncProjectStatusWithRoles(supabase, joinRequest.project_id)
+
+    if (projectStatusError) {
+      return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
     }
 
     return NextResponse.json(
