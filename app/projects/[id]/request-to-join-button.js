@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Send, UserPlus, X } from 'lucide-react'
 
 export default function RequestToJoinButton({ projectId, roleId }) {
   const router = useRouter()
@@ -47,15 +48,19 @@ export default function RequestToJoinButton({ projectId, roleId }) {
     return (
       <button
         onClick={() => setShowForm(true)}
-        className="mt-4 rounded-lg bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700"
+        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
       >
+        <UserPlus size={16} />
         Request to Join
       </button>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-4 space-y-3 rounded-xl border border-emerald-100 bg-white p-4"
+    >
       {error && (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
           {error}
@@ -73,23 +78,25 @@ export default function RequestToJoinButton({ projectId, roleId }) {
         onChange={(e) => setMessage(e.target.value)}
         placeholder="Write a short message to the project owner..."
         rows="3"
-        className="w-full rounded-lg border border-gray-300 px-3 py-2"
+        className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
       />
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-green-600 px-3 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
         >
+          <Send size={14} />
           {loading ? 'Sending...' : 'Send Request'}
         </button>
 
         <button
           type="button"
           onClick={() => setShowForm(false)}
-          className="rounded-lg bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
         >
+          <X size={14} />
           Cancel
         </button>
       </div>

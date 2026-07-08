@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import { extractSkillsWithAI } from '@/lib/ai-skills'
+import { enqueueOpportunity } from '@/lib/queue'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request) {
   try {
@@ -9,6 +11,11 @@ export async function POST(request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user?.id) {
       return NextResponse.json({ error: 'Unauthorized access denied' }, { status: 401 })
+    }
+
+    const { limited } = rateLimit(`sync:${user.id}`, 3, 60000)
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const apiResponse = await fetch('https://remotive.com/api/remote-jobs?limit=10', {
@@ -54,7 +61,7 @@ export async function POST(request) {
     const newJobs = formattedJobs.filter(j => !existingKeys.has(`${j.title}|${j.company}`))
 
     if (newJobs.length === 0) {
-      return NextResponse.json({ message: 'No new remote jobs to sync (all already exist)' }, { status: 200 })
+      return NextResponse.json({ message: 'All sources synced!' }, { status: 200 })
     }
 
     const { data: insertedData, error: dbError } = await supabase
@@ -68,12 +75,21 @@ export async function POST(request) {
     }
 
     if (insertedData && insertedData.length > 0) {
-      for (const job of insertedData) {
-        try {
-          await extractSkillsWithAI(job.id, job.description)
-        } catch (individualError) {
-          console.error(`Isolated pipeline failure on job ${job.id}:`, individualError.message)
+      const results = await Promise.all(
+        insertedData.map(job => enqueueOpportunity(job.id, job.description))
+      )
+
+      if (results.some(r => r === null)) {
+        console.log(`Queue unavailable — batch-processing ${insertedData.length} jobs inline (concurrency: 3)`)
+        const batchSize = 3
+        for (let i = 0; i < insertedData.length; i += batchSize) {
+          const batch = insertedData.slice(i, i + batchSize)
+          await Promise.allSettled(
+            batch.map(job => extractSkillsWithAI(job.id, job.description))
+          )
         }
+      } else {
+        console.log(`Enqueued ${insertedData.length} jobs for background skill extraction`)
       }
     }
 

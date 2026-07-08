@@ -115,7 +115,7 @@ export default async function WorkspacePage({ params, searchParams }) {
               background: isCompleted ? theme.bg.emeraldSoft : theme.bg.indigoSoft,
               color: isCompleted ? theme.text.emerald : theme.text.indigo,
             }}>
-              {isCompleted ? '✅ Completed' : '🔵 Active'}
+              {isCompleted ? '✅ Completed' : '🔵 In Progress'}
             </span>
             {isOwner && <span style={{ fontSize: '12px', color: theme.text.tertiary }}>You are the owner</span>}
             {totalTasks > 0 && (

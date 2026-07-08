@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST() {
   try {
@@ -8,6 +9,11 @@ export async function POST() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized profile request rejected' }, { status: 401 });
+    }
+
+    const { limited } = rateLimit(`match:${user.id}`, 5, 60000)
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     const userId = user.id;

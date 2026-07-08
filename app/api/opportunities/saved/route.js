@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Forces Next.js to run this endpoint dynamically on every request to prevent caching stale data
 export const dynamic = 'force-dynamic'
@@ -20,6 +21,11 @@ export async function GET() {
         { error: 'Unauthorized access denied' }, 
         { status: 401 }
       )
+    }
+
+    const { limited } = rateLimit(`saved-list:${user.id}`, 20, 60000)
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     // 2. Perform query retrieving bookmarks with full job details
@@ -104,6 +110,11 @@ export async function POST(request) {
       )
     }
 
+    const { limited } = rateLimit(`saved-add:${user.id}`, 10, 60000)
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     // 2. Parse request body
     let opportunityId
     try {
@@ -175,6 +186,11 @@ export async function DELETE(request) {
         { error: 'Unauthorized access denied' }, 
         { status: 401 }
       )
+    }
+
+    const { limited } = rateLimit(`saved-remove:${user.id}`, 10, 60000)
+    if (limited) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
 
     // 2. Retrieve opportunity_id from URL query parameters or request body
