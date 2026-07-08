@@ -36,91 +36,31 @@ export async function PATCH(request, { params }) {
     const { id: projectId, taskId } = await params
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { access, reason, status, isOwner } = await checkWorkspaceAccess(
-      supabase, projectId, user.id
-    )
-    if (!access) return NextResponse.json({ error: reason }, { status })
-
-    const { data: existingTask } = await supabase
-      .from('tasks')
-      .select('id, assigned_to, status')
-      .eq('id', taskId)
-      .eq('project_id', projectId)
-      .single()
-
-    if (!existingTask) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
-    }
-
     const body = await request.json()
-    const updates = {}
+    const { status } = body
 
-    if (body.status !== undefined) {
-      if (!VALID_STATUSES.includes(body.status)) {
-        return NextResponse.json(
-          { error: `Status must be one of: ${VALID_STATUSES.join(', ')}` },
-          { status: 400 }
-        )
-      }
-      updates.status = body.status
-    }
+    const allowedStatuses = ['todo', 'in_progress', 'done']
 
-    if (body.title !== undefined) {
-      if (typeof body.title !== 'string' || body.title.trim().length === 0) {
-        return NextResponse.json({ error: 'Title cannot be empty' }, { status: 400 })
-      }
-      updates.title = body.title.trim()
-    }
-
-    if (body.description !== undefined) {
-      updates.description = body.description?.trim() || null
-    }
-
-    if (body.due_date !== undefined) {
-      updates.due_date = body.due_date || null
-    }
-
-    if (body.assigned_to !== undefined) {
-      if (!isOwner && body.assigned_to !== user.id) {
-        return NextResponse.json(
-          { error: 'Only the project owner can reassign tasks to others' },
-          { status: 403 }
-        )
-      }
-      updates.assigned_to = body.assigned_to || null
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    if (!allowedStatuses.includes(status)) {
+      return NextResponse.json({ error: 'Invalid task status' }, { status: 400 })
     }
 
     const { data: task, error } = await supabase
       .from('tasks')
-      .update(updates)
+      .update({ status })
       .eq('id', taskId)
       .eq('project_id', projectId)
-      .select(`
-        id,
-        title,
-        description,
-        status,
-        due_date,
-        created_at,
-        assigned_to,
-        profiles!tasks_assigned_to_fkey (
-          id,
-          full_name,
-          username,
-          avatar_url
-        )
-      `)
+      .select()
       .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     return NextResponse.json({ task }, { status: 200 })
   } catch {
@@ -175,3 +115,5 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }
 }
+
+

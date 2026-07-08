@@ -328,7 +328,7 @@ export default function ChatPanel({ projectId, currentUserId }) {
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Enter to send)"
+            placeholder="Type a message..."
             rows={1}
             style={{
               flex: 1,

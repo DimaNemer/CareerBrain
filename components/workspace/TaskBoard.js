@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { theme } from '@/constants/colors'
+import { useRouter } from 'next/navigation'
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do', color: theme.text.secondary },
@@ -22,6 +23,7 @@ export default function TaskBoard({
   const [newTask, setNewTask] = useState({ title: '', assigned_to: '', due_date: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const router = useRouter()
 
   const tasksByStatus = {
     todo: tasks.filter(t => t.status === 'todo'),
@@ -43,9 +45,11 @@ export default function TaskBoard({
         const data = await res.json()
         setError(data.error || 'Failed to update task')
       }
+      router.refresh()
     } catch {
       setError('Failed to update task')
     }
+    
   }
 
   async function deleteTask(taskId) {
@@ -55,6 +59,7 @@ export default function TaskBoard({
       await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
         method: 'DELETE',
       })
+      router.refresh()
     } catch {
       setError('Failed to delete task')
     }
@@ -79,6 +84,7 @@ export default function TaskBoard({
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Failed to create task'); return }
       setTasks(prev => [...prev, data.task])
+      router.refresh()
       setNewTask({ title: '', assigned_to: '', due_date: '' })
       setCreating(false)
     } catch {
@@ -87,6 +93,13 @@ export default function TaskBoard({
       setLoading(false)
     }
   }
+  const uniqueTeamMembers = Array.from(
+  new Map(
+    (teamMembers || [])
+      .filter(tm => tm.profiles?.id)
+      .map(tm => [tm.profiles.id, tm])
+  ).values()
+)
 
   return (
     <div>
@@ -134,11 +147,12 @@ export default function TaskBoard({
               style={{ flex: 1, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary, cursor: 'pointer' }}
             >
               <option value="">Assign to... (optional)</option>
-              {teamMembers?.map(tm => (
-                <option key={tm.profiles?.id} value={tm.profiles?.id}>
-                  {tm.profiles?.full_name} {tm.role_in_project ? `· ${tm.role_in_project}` : ''}
-                </option>
-              ))}
+            {uniqueTeamMembers.map(tm => (
+  <option key={tm.profiles.id} value={tm.profiles.id}>
+    {tm.profiles.full_name || tm.profiles.username || 'Unnamed user'}
+    {tm.role_in_project ? ` · ${tm.role_in_project}` : ''}
+  </option>
+))}
             </select>
 
             {/* Due date */}
