@@ -2,6 +2,41 @@ import { createClient } from '@/lib/supabase-server'
 import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
 import { NextResponse } from 'next/server'
 
+async function findOrCreateSkillId(supabase, skillName) {
+  const normalizedSkillName = skillName?.trim()
+
+  if (!normalizedSkillName) {
+    return { skillId: null, error: null }
+  }
+
+  const { data: existingSkill, error: findError } = await supabase
+    .from('skills')
+    .select('id')
+    .ilike('name', normalizedSkillName)
+    .limit(1)
+    .maybeSingle()
+
+  if (findError) {
+    return { skillId: null, error: findError }
+  }
+
+  if (existingSkill) {
+    return { skillId: existingSkill.id, error: null }
+  }
+
+  const { data: newSkill, error: createError } = await supabase
+    .from('skills')
+    .insert({ name: normalizedSkillName })
+    .select('id')
+    .single()
+
+  if (createError) {
+    return { skillId: null, error: createError }
+  }
+
+  return { skillId: newSkill.id, error: null }
+}
+
 export async function GET(request) {
   try {
     const supabase = await createClient()
@@ -52,7 +87,8 @@ export async function POST(request) {
 
     const projectId = body.project_id
     const roleTitle = body.role_title?.trim()
-    const skillId = body.skill_id || null
+    let skillId = body.skill_id || null
+    const skillName = body.skill_name?.trim()
     const quantityNeeded = Number(body.quantity_needed ?? 1)
 
     if (!projectId) {
@@ -84,6 +120,17 @@ export async function POST(request) {
         { error: 'Only the project owner can add roles' },
         { status: 403 }
       )
+    }
+
+    if (!skillId && skillName) {
+      const { skillId: resolvedSkillId, error: skillError } =
+        await findOrCreateSkillId(supabase, skillName)
+
+      if (skillError) {
+        return NextResponse.json({ error: skillError.message }, { status: 500 })
+      }
+
+      skillId = resolvedSkillId
     }
 
     const { data: role, error } = await supabase

@@ -23,24 +23,8 @@ const STATUS_STYLES = {
 
 export default function ProjectBrowser({ projects }) {
   const [search, setSearch] = useState('')
-  const [skillId, setSkillId] = useState('')
+  const [skillSearch, setSkillSearch] = useState('')
   const [roleTitle, setRoleTitle] = useState('')
-
-  const skills = useMemo(() => {
-    const skillsById = new Map()
-
-    projects.forEach((project) => {
-      project.project_roles?.forEach((role) => {
-        if (role.skills) {
-          skillsById.set(role.skills.id, role.skills.name)
-        }
-      })
-    })
-
-    return [...skillsById.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [projects])
 
   const roleTitles = useMemo(() => {
     const titles = new Map()
@@ -62,6 +46,7 @@ export default function ProjectBrowser({ projects }) {
 
   const filteredProjects = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
+    const normalizedSkillSearch = skillSearch.trim().toLowerCase()
 
     return projects.filter((project) => {
       const matchesName =
@@ -69,24 +54,29 @@ export default function ProjectBrowser({ projects }) {
         project.title.toLowerCase().includes(normalizedSearch)
 
       const matchesRoleFilters = project.project_roles?.some((role) => {
-        const matchesSkill = !skillId || role.skills?.id === skillId
+        const matchesSkill =
+          !normalizedSkillSearch ||
+          role.skills?.name?.toLowerCase().includes(normalizedSkillSearch)
         const matchesRole =
           !roleTitle || role.role_title.trim().toLowerCase() === roleTitle
 
         return matchesSkill && matchesRole
       })
 
-      return matchesName && (!skillId && !roleTitle ? true : matchesRoleFilters)
+      return (
+        matchesName &&
+        (!normalizedSkillSearch && !roleTitle ? true : matchesRoleFilters)
+      )
     })
-  }, [projects, roleTitle, search, skillId])
+  }, [projects, roleTitle, search, skillSearch])
 
   function clearFilters() {
     setSearch('')
-    setSkillId('')
+    setSkillSearch('')
     setRoleTitle('')
   }
 
-  const hasFilters = Boolean(search || skillId || roleTitle)
+  const hasFilters = Boolean(search || skillSearch || roleTitle)
 
   return (
     <>
@@ -129,19 +119,14 @@ export default function ProjectBrowser({ projects }) {
           >
               Skill
           </label>
-          <select
+          <input
             id="skill-filter"
-            value={skillId}
-            onChange={(event) => setSkillId(event.target.value)}
+            type="search"
+            value={skillSearch}
+            onChange={(event) => setSkillSearch(event.target.value)}
+            placeholder="Search skills..."
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100"
-          >
-            <option value="">All skills</option>
-            {skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
           <div className="lg:col-span-3">

@@ -10,9 +10,15 @@ export default function RoleActions({ role, skills }) {
   const [isEditing, setIsEditing] = useState(false)
   const [roleTitle, setRoleTitle] = useState(role.role_title || '')
   const [skillId, setSkillId] = useState(role.skill_id || '')
+  const [skillName, setSkillName] = useState(role.skills?.name || '')
   const [quantityNeeded, setQuantityNeeded] = useState(role.quantity_needed ?? 1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const normalizedSkillName = skillName.trim().toLowerCase()
+  const matchedSkill = skills.find(
+    (skill) => skill.name.trim().toLowerCase() === normalizedSkillName
+  )
 
   async function handleUpdate(e) {
     e.preventDefault()
@@ -24,7 +30,8 @@ export default function RoleActions({ role, skills }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         role_title: roleTitle,
-        skill_id: skillId || null,
+        skill_id: skillId || matchedSkill?.id || null,
+        skill_name: skillId || matchedSkill ? null : skillName.trim(),
         quantity_needed: quantityNeeded,
       }),
     })
@@ -83,18 +90,29 @@ export default function RoleActions({ role, skills }) {
           required
         />
 
-        <select
-          value={skillId}
-          onChange={(e) => setSkillId(e.target.value)}
+        <input
+          type="text"
+          list={`role-skills-${role.id}`}
+          value={skillName}
+          onChange={(e) => {
+            const nextSkillName = e.target.value
+            const nextSkill = skills.find(
+              (skill) =>
+                skill.name.trim().toLowerCase() ===
+                nextSkillName.trim().toLowerCase()
+            )
+
+            setSkillName(nextSkillName)
+            setSkillId(nextSkill?.id || '')
+          }}
+          placeholder="Type or select a skill"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-        >
-          <option value="">No specific skill</option>
+        />
+        <datalist id={`role-skills-${role.id}`}>
           {skills.map((skill) => (
-            <option key={skill.id} value={skill.id}>
-              {skill.name}
-            </option>
+            <option key={skill.id} value={skill.name} />
           ))}
-        </select>
+        </datalist>
 
         <input
           type="number"

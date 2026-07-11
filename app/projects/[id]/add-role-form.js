@@ -9,9 +9,15 @@ export default function AddRoleForm({ projectId, skills }) {
 
   const [roleTitle, setRoleTitle] = useState('')
   const [skillId, setSkillId] = useState('')
+  const [skillName, setSkillName] = useState('')
   const [quantityNeeded, setQuantityNeeded] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const normalizedSkillName = skillName.trim().toLowerCase()
+  const matchedSkill = skills.find(
+    (skill) => skill.name.trim().toLowerCase() === normalizedSkillName
+  )
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -26,7 +32,8 @@ export default function AddRoleForm({ projectId, skills }) {
       body: JSON.stringify({
         project_id: projectId,
         role_title: roleTitle,
-        skill_id: skillId || null,
+        skill_id: skillId || matchedSkill?.id || null,
+        skill_name: skillId || matchedSkill ? null : skillName.trim(),
         quantity_needed: quantityNeeded,
       }),
     })
@@ -41,6 +48,7 @@ export default function AddRoleForm({ projectId, skills }) {
 
     setRoleTitle('')
     setSkillId('')
+    setSkillName('')
     setQuantityNeeded(1)
     setLoading(false)
 
@@ -90,18 +98,29 @@ export default function AddRoleForm({ projectId, skills }) {
           <label className="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
             Skill
           </label>
-          <select
-            value={skillId}
-            onChange={(e) => setSkillId(e.target.value)}
+          <input
+            type="text"
+            list="role-skills"
+            value={skillName}
+            onChange={(e) => {
+              const nextSkillName = e.target.value
+              const nextSkill = skills.find(
+                (skill) =>
+                  skill.name.trim().toLowerCase() ===
+                  nextSkillName.trim().toLowerCase()
+              )
+
+              setSkillName(nextSkillName)
+              setSkillId(nextSkill?.id || '')
+            }}
+            placeholder="Type or select a skill"
             className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-          >
-            <option value="">No specific skill</option>
+          />
+          <datalist id="role-skills">
             {skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.name}
-              </option>
+              <option key={skill.id} value={skill.name} />
             ))}
-          </select>
+          </datalist>
         </div>
 
         <div>

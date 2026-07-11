@@ -2,6 +2,41 @@ import { createClient } from '@/lib/supabase-server'
 import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
 import { NextResponse } from 'next/server'
 
+async function findOrCreateSkillId(supabase, skillName) {
+  const normalizedSkillName = skillName?.trim()
+
+  if (!normalizedSkillName) {
+    return { skillId: null, error: null }
+  }
+
+  const { data: existingSkill, error: findError } = await supabase
+    .from('skills')
+    .select('id')
+    .ilike('name', normalizedSkillName)
+    .limit(1)
+    .maybeSingle()
+
+  if (findError) {
+    return { skillId: null, error: findError }
+  }
+
+  if (existingSkill) {
+    return { skillId: existingSkill.id, error: null }
+  }
+
+  const { data: newSkill, error: createError } = await supabase
+    .from('skills')
+    .insert({ name: normalizedSkillName })
+    .select('id')
+    .single()
+
+  if (createError) {
+    return { skillId: null, error: createError }
+  }
+
+  return { skillId: newSkill.id, error: null }
+}
+
 async function getRoleWithProject(supabase, roleId) {
   const { data: role, error } = await supabase
     .from('project_roles')
@@ -63,8 +98,22 @@ export async function PUT(request, { params }) {
       updates.role_title = roleTitle
     }
 
-    if (body.skill_id !== undefined) {
-      updates.skill_id = body.skill_id || null
+    if (body.skill_id !== undefined || body.skill_name !== undefined) {
+      const skillId = body.skill_id || null
+      const skillName = body.skill_name?.trim()
+
+      if (!skillId && skillName) {
+        const { skillId: resolvedSkillId, error: skillError } =
+          await findOrCreateSkillId(supabase, skillName)
+
+        if (skillError) {
+          return NextResponse.json({ error: skillError.message }, { status: 500 })
+        }
+
+        updates.skill_id = resolvedSkillId
+      } else {
+        updates.skill_id = skillId
+      }
     }
 
     if (body.quantity_needed !== undefined) {
