@@ -1,37 +1,20 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { theme } from '@/constants/colors'
-// 1️⃣ استيراد مكون المصادر التعليمية المطور
-import LearningResourceList from '@/components/LearningResourceList'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // ⚡ تحديث الاستعلام: جلب ملف المستخدم وبنفس الوقت عمل Join لجلب مهاراته الحقيقية
   const { data: profile } = await supabase
     .from('profiles')
-    .select(`
-      full_name, 
-      headline, 
-      readiness_score,
-      user_skills (
-        skills (
-          name
-        )
-      )
-    `)
+    .select('full_name, headline, readiness_score')
     .eq('id', user.id)
     .single()
 
   const firstName = profile?.full_name?.split(' ')[0] || 'there'
   const score = profile?.readiness_score || 0
-
-  // 🎯 استخراج اسم أول مهارة يمتلكها المستخدم ديناميكياً لتمريرها للمكوّن
-  // إذا لم يكن يملك أي مهارات بعد، نمرر "React" كقيمة افتراضية (Fallback)
-  const userSkills = profile?.user_skills || []
-  const activeSkillName = userSkills[0]?.skills?.name || 'React'
 
   return (
     <main style={{
@@ -66,7 +49,7 @@ export default async function DashboardPage() {
           border: `1px solid ${theme.border.light}`,
           borderRadius: '16px',
           padding: '24px',
-          marginBottom: '32px',
+          marginBottom: '24px',
           display: 'inline-flex',
           alignItems: 'center',
           gap: '16px',
@@ -101,22 +84,6 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
-
-      {/* 2️⃣ قسم المصادر التعليمية الديناميكي بالكامل */}
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{
-          fontSize: '20px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          marginBottom: '16px',
-          letterSpacing: '-0.3px',
-        }}>
-          Recommended Resources for {activeSkillName}
-        </h2>
-        
-        {/* استدعاء المكون وتمرير اسم المهارة المستخرج ديناميكياً من حساب المستخدم */}
-        <LearningResourceList skillName={activeSkillName} />
-      </div>
 
       {/* Placeholder for other members' features */}
       <div style={{
