@@ -1,839 +1,1014 @@
-// import { createClient } from '@/lib/supabase-server'
-// import { redirect } from 'next/navigation'
-// import Link from 'next/link'
-// import { theme } from '@/constants/colors'
 
-// export default async function ProfilePage() {
-//   const supabase = await createClient()
-//   const { data: { user } } = await supabase.auth.getUser()
-//   if (!user) redirect('/login')
 
-//   const { data: profile } = await supabase
-//     .from('profiles')
-//     .select(`
-//       *,
-//       user_skills (
-//         id,
-//         proficiency_level,
-//         source,
-//         skills ( name, category )
-//       )
-//     `)
-//     .eq('id', user.id)
-//     .single()
-
-//   const skills = profile?.user_skills || []
-
-//   function getScoreColor(s) {
-//     if (s >= 70) return theme.score.high
-//     if (s >= 40) return theme.score.medium
-//     return theme.score.low
-//   }
-
-//   function getProficiencyLabel(level) {
-//     const labels = { 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }
-//     return labels[level] || 'Beginner'
-//   }
-
-//   function getSourceBadge(source) {
-//     const badges = {
-//       CV: { label: 'From CV', color: theme.text.indigo, bg: theme.bg.indigoSoft },
-//       manual: { label: 'Manual', color: theme.text.secondary, bg: theme.bg.hover },
-//       Project: { label: 'Project', color: theme.text.emerald, bg: theme.bg.emeraldSoft },
-//     }
-//     return badges[source] || badges.manual
-//   }
-
-//   const score = profile?.readiness_score || 0
-//   const skillsByCategory = skills.reduce((acc, us) => {
-//     const cat = us.skills?.category || 'Other'
-//     if (!acc[cat]) acc[cat] = []
-//     acc[cat].push(us)
-//     return acc
-//   }, {})
-
-//   return (
-//     <main style={{
-//       maxWidth: '760px',
-//       margin: '0 auto',
-//       padding: '48px 24px',
-//     }}>
-//       {/* Header */}
-//       <div style={{
-//         display: 'flex',
-//         alignItems: 'flex-start',
-//         justifyContent: 'space-between',
-//         marginBottom: '32px',
-//         gap: '16px',
-//       }}>
-//         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-//           {/* Avatar */}
-//           <div style={{
-//             width: '64px',
-//             height: '64px',
-//             background: `linear-gradient(135deg, ${theme.action.primary}, #818CF8)`,
-//             borderRadius: '16px',
-//             display: 'flex',
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             fontSize: '24px',
-//             color: theme.text.inverse,
-//             fontWeight: 700,
-//             flexShrink: 0,
-//           }}>
-//             {profile?.full_name?.[0]?.toUpperCase() || '?'}
-//           </div>
-//           <div>
-//             <h1 style={{
-//               fontSize: '22px',
-//               fontWeight: 700,
-//               color: theme.text.primary,
-//               margin: '0 0 4px',
-//               letterSpacing: '-0.3px',
-//             }}>
-//               {profile?.full_name || 'Your Name'}
-//             </h1>
-//             <p style={{
-//               fontSize: '14px',
-//               color: theme.text.secondary,
-//               margin: '0 0 4px',
-//             }}>
-//               {profile?.headline || 'Add a headline'}
-//             </p>
-//             {profile?.username && (
-//               <p style={{
-//                 fontSize: '13px',
-//                 color: theme.text.tertiary,
-//                 margin: 0,
-//               }}>
-//                 @{profile.username}
-//               </p>
-//             )}
-//           </div>
-//         </div>
-
-//         <Link href="/profile/edit" style={{
-//           padding: '8px 16px',
-//           background: theme.bg.hover,
-//           color: theme.text.primary,
-//           border: `1px solid ${theme.border.light}`,
-//           borderRadius: '10px',
-//           fontSize: '14px',
-//           fontWeight: 500,
-//           textDecoration: 'none',
-//           whiteSpace: 'nowrap',
-//           flexShrink: 0,
-//         }}>
-//           Edit profile
-//         </Link>
-//       </div>
-
-//       {/* Readiness score */}
-//       <div style={{
-//         background: theme.bg.card,
-//         border: `1px solid ${theme.border.light}`,
-//         borderRadius: '16px',
-//         padding: '24px',
-//         marginBottom: '20px',
-//       }}>
-//         <div style={{
-//           display: 'flex',
-//           alignItems: 'center',
-//           justifyContent: 'space-between',
-//           marginBottom: '16px',
-//         }}>
-//           <h2 style={{
-//             fontSize: '15px',
-//             fontWeight: 600,
-//             color: theme.text.primary,
-//             margin: 0,
-//           }}>
-//             Readiness score
-//           </h2>
-//           <span style={{
-//             fontSize: '28px',
-//             fontWeight: 700,
-//             color: getScoreColor(score),
-//             letterSpacing: '-0.5px',
-//           }}>
-//             {score}%
-//           </span>
-//         </div>
-
-//         {/* Progress bar */}
-//         <div style={{
-//           height: '8px',
-//           background: theme.border.light,
-//           borderRadius: '4px',
-//           overflow: 'hidden',
-//         }}>
-//           <div style={{
-//             height: '100%',
-//             width: `${score}%`,
-//             background: getScoreColor(score),
-//             borderRadius: '4px',
-//             transition: 'width 0.6s ease',
-//           }} />
-//         </div>
-
-//         <p style={{
-//           fontSize: '13px',
-//           color: theme.text.secondary,
-//           margin: '12px 0 0',
-//         }}>
-//           {score === 0
-//             ? 'Upload your CV to calculate your readiness score.'
-//             : score >= 70
-//             ? 'Strong profile — you are a great match for many opportunities.'
-//             : 'Keep building skills and completing projects to improve your score.'}
-//         </p>
-//       </div>
-
-//       {/* Skills */}
-//       <div style={{
-//         background: theme.bg.card,
-//         border: `1px solid ${theme.border.light}`,
-//         borderRadius: '16px',
-//         padding: '24px',
-//         marginBottom: '20px',
-//       }}>
-//         <div style={{
-//           display: 'flex',
-//           alignItems: 'center',
-//           justifyContent: 'space-between',
-//           marginBottom: '20px',
-//         }}>
-//           <h2 style={{
-//             fontSize: '15px',
-//             fontWeight: 600,
-//             color: theme.text.primary,
-//             margin: 0,
-//           }}>
-//             Skills ({skills.length})
-//           </h2>
-//           <Link href="/profile/edit" style={{
-//             fontSize: '13px',
-//             color: theme.text.indigo,
-//             textDecoration: 'none',
-//             fontWeight: 500,
-//           }}>
-//             + Add skill
-//           </Link>
-//         </div>
-
-//         {skills.length === 0 ? (
-//           <div style={{
-//             textAlign: 'center',
-//             padding: '32px 0',
-//           }}>
-//             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📄</div>
-//             <p style={{
-//               fontSize: '14px',
-//               color: theme.text.secondary,
-//               margin: '0 0 16px',
-//             }}>
-//               No skills yet. Upload your CV to extract them automatically.
-//             </p>
-//             <Link href="/profile/edit" style={{
-//               background: theme.action.primary,
-//               color: theme.action.primaryText,
-//               padding: '8px 16px',
-//               borderRadius: '8px',
-//               fontSize: '14px',
-//               fontWeight: 500,
-//               textDecoration: 'none',
-//             }}>
-//               Upload CV
-//             </Link>
-//           </div>
-//         ) : (
-//           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-//             {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
-//               <div key={category}>
-//                 <div style={{
-//                   fontSize: '12px',
-//                   fontWeight: 600,
-//                   color: theme.text.secondary,
-//                   textTransform: 'uppercase',
-//                   letterSpacing: '0.6px',
-//                   marginBottom: '10px',
-//                 }}>
-//                   {category}
-//                 </div>
-//                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-//                   {categorySkills.map((us, i) => {
-//                     const badge = getSourceBadge(us.source)
-//                     return (
-//                       <div key={i} style={{
-//                         display: 'flex',
-//                         alignItems: 'center',
-//                         gap: '6px',
-//                         padding: '6px 12px',
-//                         background: theme.bg.hover,
-//                         border: `1px solid ${theme.border.light}`,
-//                         borderRadius: '8px',
-//                         fontSize: '13px',
-//                       }}>
-//                         <span style={{ color: theme.text.primary, fontWeight: 500 }}>
-//                           {us.skills?.name}
-//                         </span>
-//                         <span style={{
-//                           fontSize: '11px',
-//                           color: badge.color,
-//                           background: badge.bg,
-//                           padding: '2px 6px',
-//                           borderRadius: '4px',
-//                           fontWeight: 500,
-//                         }}>
-//                           {getProficiencyLabel(us.proficiency_level)}
-//                         </span>
-//                       </div>
-//                     )
-//                   })}
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-//       </div>
-
-//       {/* About */}
-//       <div style={{
-//         background: theme.bg.card,
-//         border: `1px solid ${theme.border.light}`,
-//         borderRadius: '16px',
-//         padding: '24px',
-//       }}>
-//         <h2 style={{
-//           fontSize: '15px',
-//           fontWeight: 600,
-//           color: theme.text.primary,
-//           margin: '0 0 16px',
-//         }}>
-//           About
-//         </h2>
-//         <p style={{
-//           fontSize: '14px',
-//           color: theme.text.secondary,
-//           margin: '0 0 20px',
-//           lineHeight: 1.7,
-//         }}>
-//           {profile?.bio || 'No bio yet.'}
-//         </p>
-
-//         <div style={{
-//           display: 'grid',
-//           gridTemplateColumns: '1fr 1fr',
-//           gap: '12px',
-//         }}>
-//           {profile?.university && (
-//             <InfoItem icon="🎓" label="University" value={profile.university} />
-//           )}
-//           {profile?.education_level && (
-//             <InfoItem icon="📚" label="Education" value={profile.education_level} />
-//           )}
-//           {profile?.graduation_year && (
-//             <InfoItem icon="📅" label="Graduation" value={profile.graduation_year} />
-//           )}
-//           {profile?.github_url && (
-//             <InfoItem icon="💻" label="GitHub" value="View profile" href={profile.github_url} />
-//           )}
-//           {profile?.linkedin_url && (
-//             <InfoItem icon="🔗" label="LinkedIn" value="View profile" href={profile.linkedin_url} />
-//           )}
-//           {profile?.portfolio_url && (
-//             <InfoItem icon="🌐" label="Portfolio" value="View site" href={profile.portfolio_url} />
-//           )}
-//         </div>
-//       </div>
-//     </main>
-//   )
-// }
-
-// function InfoItem({ icon, label, value, href }) {
-//   return (
-//     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-//       <span style={{ fontSize: '16px' }}>{icon}</span>
-//       <div>
-//         <div style={{
-//           fontSize: '11px',
-//           color: theme.text.tertiary,
-//           fontWeight: 500,
-//           textTransform: 'uppercase',
-//           letterSpacing: '0.4px',
-//         }}>
-//           {label}
-//         </div>
-//         {href ? (
-//           <a href={href} target="_blank" rel="noopener noreferrer" style={{
-//             fontSize: '13px',
-//             color: theme.text.indigo,
-//             textDecoration: 'none',
-//             fontWeight: 500,
-//           }}>
-//             {value}
-//           </a>
-//         ) : (
-//           <div style={{ fontSize: '13px', color: theme.text.primary, fontWeight: 500 }}>
-//             {value}
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { theme } from '@/constants/colors'
-import { getProjectStatusLabel } from '@/lib/project-status'
 
-export default async function ProfilePage() {
+import AvatarUpload from '@/components/profile/AvatarUpload'
+import CopyButton from '@/components/profile/CopyButton'
+import ProjectPostForm from '@/components/profile/ProjectPostForm'
+
+export default async function PrivateProfilePage() {
   const supabase = await createClient()
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
+  if (!user) {
+    redirect('/login')
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select(`
-      full_name,
-      username,
-      headline,
-      bio,
-      education_level,
-      university,
-      graduation_year,
-      github_url,
-      linkedin_url,
-      portfolio_url,
-      readiness_score,
+      *,
       user_skills (
+        id,
         proficiency_level,
         source,
-        skills ( name, category )
+        skills (
+          id,
+          name,
+          category
+        )
       )
     `)
     .eq('id', user.id)
     .single()
 
-  const { data: myProjects } = await supabase
-    .from('projects')
-    .select('id, title, status, created_at')
-    .eq('owner_id', user.id)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+  if (profileError) {
+    console.error('Private profile error:', profileError)
+  }
 
-  const { data: joinedProjects } = await supabase
-    .from('project_members')
+const { data: certificates = [] } = await supabase
+  .from('user_certificates')
+  .select(`
+    id,
+    name,
+    issuing_organization,
+    issue_date,
+    expiration_date,
+    credential_id,
+    credential_url
+  `)
+  .eq('user_id', user.id)
+  .order('issue_date', {
+    ascending: false,
+    nullsFirst: false,
+  })
+
+  const { data: ownedProjects = [] } = await supabase
+    .from('projects')
     .select(`
       id,
+      title,
+      description,
+      status,
+      created_at
+    `)
+    .eq('owner_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', {
+      ascending: false,
+    })
+
+  const { data: joinedProjects = [] } = await supabase
+    .from('project_members')
+    .select(`
       role_in_project,
       joined_at,
       projects (
         id,
         title,
+        description,
         status,
-        deleted_at
+        created_at
       )
     `)
     .eq('user_id', user.id)
-    .order('joined_at', { ascending: false })
+    .is('left_at', null)
+    .order('joined_at', {
+      ascending: false,
+    })
+
+const { data: posts = [] } = await supabase
+  .from('project_posts')
+  .select(`
+    id,
+    title,
+    content,
+    skills_highlighted,
+    image_url,
+    image_path,
+    created_at,
+    projects (
+      id,
+      title
+    )
+  `)
+    .eq('user_id', user.id)
+    .order('created_at', {
+      ascending: false,
+    })
 
   const skills = profile?.user_skills || []
-  const score = profile?.readiness_score || 0
 
-  const activeJoinedProjects =
-    joinedProjects?.filter((member) => member.projects && !member.projects.deleted_at) || []
+  const verifiedSkills = skills.filter(
+    skill => skill.source === 'Project'
+  )
 
-  function scoreColor(s) {
-    if (s >= 70) return theme.score.high
-    if (s >= 40) return theme.score.medium
-    return theme.score.low
-  }
+  const completedProjects = [
+    ...ownedProjects.filter(
+      project => project.status === 'completed'
+    ),
+    ...joinedProjects
+      .filter(
+        row => row.projects?.status === 'completed'
+      )
+      .map(row => row.projects),
+  ]
 
-  function ProjectCard({ project, role, joinedAt }) {
-    return (
-      <div style={{
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '12px',
-        padding: '14px',
-        background: theme.bg.hover,
-      }}>
-        <h3 style={{
-          fontSize: '15px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          margin: '0 0 6px',
-        }}>
-          {project.title}
-        </h3>
-
-        <p style={{
-          fontSize: '13px',
-          color: theme.text.secondary,
-          margin: '0 0 6px',
-        }}>
-          Status: {getProjectStatusLabel(project.status)}
-        </p>
-
-        {role && (
-          <p style={{
-            fontSize: '13px',
-            color: theme.text.secondary,
-            margin: '0 0 6px',
-          }}>
-            Role: {role}
-          </p>
-        )}
-
-        {joinedAt && (
-          <p style={{
-            fontSize: '13px',
-            color: theme.text.secondary,
-            margin: '0 0 12px',
-          }}>
-            Joined: {new Date(joinedAt).toLocaleDateString()}
-          </p>
-        )}
-
-        <Link href={`/projects/${project.id}`} style={{
-          display: 'inline-block',
-          padding: '7px 12px',
-          background: theme.action.primary,
-          color: theme.action.primaryText,
-          borderRadius: '8px',
-          fontSize: '13px',
-          fontWeight: 500,
-          textDecoration: 'none',
-        }}>
-          View Project
-        </Link>
-      </div>
-    )
-  }
+  const initials =
+    profile?.full_name
+      ?.split(' ')
+      .filter(Boolean)
+      .map(name => name[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?'
 
   return (
-    <main style={{
-      maxWidth: '720px',
-      margin: '0 auto',
-      padding: '48px 24px',
-    }}>
-      {/* Header */}
-      <div style={{
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#F1F3F7',
+        paddingBottom: '60px',
+      }}
+    >
+      <div
+        style={{
+        background:
+  'linear-gradient(135deg, #211D59 0%, #37319A 55%, #111936 100%)',
+          padding: '40px 24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '900px',
+            margin: '0 auto',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px',
+              marginBottom: '28px',
+            }}
+          >
+            <Link
+              href={`/profile/${user.id}`}
+              style={{
+                padding: '8px 15px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '9px',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              View public profile
+            </Link>
+
+            <Link
+              href="/profile/edit"
+              style={{
+                padding: '8px 15px',
+                background: '#5B4FE8',
+                borderRadius: '9px',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              Edit profile
+            </Link>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '24px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <AvatarUpload
+              currentAvatarUrl={profile?.avatar_url}
+              fullName={profile?.full_name}
+            />
+
+            <div
+              style={{
+                flex: 1,
+                minWidth: '220px',
+              }}
+            >
+              <h1
+                style={{
+                  margin: '0 0 6px',
+                  color: '#FFFFFF',
+                  fontSize: '28px',
+                  fontWeight: 800,
+                }}
+              >
+                {profile?.full_name || 'Your name'}
+              </h1>
+
+              {profile?.headline && (
+                <p
+                  style={{
+                    margin: '0 0 7px',
+                    color: 'rgba(255,255,255,0.65)',
+                    fontSize: '15px',
+                  }}
+                >
+                  {profile.headline}
+                </p>
+              )}
+
+              <p
+                style={{
+                  margin: 0,
+                  color: 'rgba(255,255,255,0.35)',
+                  fontSize: '13px',
+                }}
+              >
+                @{profile?.username || 'username'}
+              </p>
+            </div>
+
+            <div
+              style={{
+                minWidth: '160px',
+                textAlign: 'center',
+                padding: '18px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+              }}
+            >
+              <div
+                style={{
+                  color: '#10B981',
+                  fontSize: '42px',
+                  fontWeight: 800,
+                }}
+              >
+                {profile?.readiness_score || 0}%
+              </div>
+
+              <div
+                style={{
+                  color: 'rgba(255,255,255,0.45)',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                Readiness score
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              marginTop: '28px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '14px',
+              overflow: 'hidden',
+            }}
+          >
+            <Stat
+              label="Skills"
+              value={skills.length}
+            />
+
+            <Stat
+              label="Verified"
+              value={verifiedSkills.length}
+            />
+
+            <Stat
+              label="Owned projects"
+              value={ownedProjects.length}
+            />
+
+            <Stat
+              label="Joined projects"
+              value={joinedProjects.length}
+              last
+            />
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '16px',
+            }}
+          >
+            <span
+              style={{
+                color: 'rgba(255,255,255,0.4)',
+                fontSize: '12px',
+              }}
+            >
+              Public profile:
+            </span>
+
+            <code
+              style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.65)',
+                fontSize: '11px',
+              }}
+            >
+              /profile/{user.id}
+            </code>
+
+            <CopyButton
+              text={`${process.env.NEXT_PUBLIC_SITE_URL || ''}/profile/${user.id}`}
+            />
+          </div>
+        </div>
+      </div>
+
+      <main
+        style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          padding: '28px 24px 0',
+        }}
+      >
+        {profile?.bio && (
+          <Section title="About">
+            <p
+              style={{
+                margin: 0,
+                color: '#4B5563',
+                fontSize: '14px',
+                lineHeight: 1.8,
+              }}
+            >
+              {profile.bio}
+            </p>
+          </Section>
+        )}
+
+        <Section
+          title="Create post"
+          description="Share an achievement or completed project."
+        >
+          <ProjectPostForm
+            completedProjects={completedProjects}
+          />
+        </Section>
+
+        <Section
+          title="Your posts"
+          count={posts.length}
+        >
+          {posts.length === 0 ? (
+            <EmptyState
+              icon="✍️"
+              message="You have not created any posts yet."
+            />
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              {posts.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                />
+              ))}
+            </div>
+          )}
+        </Section>
+{certificates.length > 0 && (
+ <Section
+  title="Licenses & certifications"
+  count={certificates.length}
+  action={
+    <Link
+      href="/profile/edit"
+      style={{
+        color: '#37319A',
+        textDecoration: 'none',
+        fontSize: '12px',
+        fontWeight: 700,
+      }}
+    >
+      Manage →
+    </Link>
+  }
+>
+  {certificates.length === 0 ? (
+    <EmptyState
+      icon="🏅"
+      message="No certificates added yet. Add one from Edit Profile."
+    />
+  ) : (
+    <CertificateList
+      certificates={certificates}
+    />
+  )}
+</Section>
+)}
+        <Section
+          title="Owned projects"
+          count={ownedProjects.length}
+          action={
+            <Link
+              href="/projects/create"
+              style={{
+                color: '#5B4FE8',
+                textDecoration: 'none',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              + New project
+            </Link>
+          }
+        >
+          {ownedProjects.length === 0 ? (
+            <EmptyState
+              icon="🚀"
+              message="You have not created any projects yet."
+            />
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              {ownedProjects.map(project => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  role="Owner"
+                />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section
+          title="Joined projects"
+          count={joinedProjects.length}
+        >
+          {joinedProjects.length === 0 ? (
+            <EmptyState
+              icon="👥"
+              message="You have not joined any projects yet."
+            />
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              {joinedProjects.map((row, index) => (
+                <ProjectRow
+                  key={row.projects?.id || index}
+                  project={row.projects}
+                  role={row.role_in_project || 'Member'}
+                />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section
+          title="Skills"
+          count={skills.length}
+        >
+          {skills.length === 0 ? (
+            <EmptyState
+              icon="⚡"
+              message="No skills have been added yet."
+            />
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              {skills.map((skill, index) => (
+                <span
+                  key={skill.id || index}
+                  style={{
+                    padding: '6px 11px',
+                    borderRadius: '8px',
+                    background:
+                      skill.source === 'Project'
+                        ? '#ECFDF5'
+                        : '#EEF2FF',
+                    color:
+                      skill.source === 'Project'
+                        ? '#047857'
+                        : '#4338CA',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {skill.source === 'Project' ? '✓ ' : ''}
+                  {skill.skills?.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </Section>
+      </main>
+    </div>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  last = false,
+}) {
+  return (
+    <div
+      style={{
+        padding: '15px 10px',
+        textAlign: 'center',
+        borderRight: last
+          ? 'none'
+          : '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      <div
+        style={{
+          color: '#FFFFFF',
+          fontSize: '22px',
+          fontWeight: 800,
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          color: 'rgba(255,255,255,0.4)',
+          fontSize: '10px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          marginTop: '2px',
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  )
+}
+
+function Section({
+  title,
+  count,
+  description,
+  action,
+  children,
+}) {
+  return (
+    <section
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '18px',
+        padding: '22px',
+        marginBottom: '17px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '12px',
+          marginBottom: '17px',
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                color: '#111827',
+                fontSize: '15px',
+              }}
+            >
+              {title}
+            </h2>
+
+            {count !== undefined && (
+              <span
+                style={{
+                  padding: '2px 7px',
+                  borderRadius: '20px',
+                  background: '#EEF2FF',
+                  color: '#4338CA',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                }}
+              >
+                {count}
+              </span>
+            )}
+          </div>
+
+          {description && (
+            <p
+              style={{
+                margin: '4px 0 0',
+                color: '#9CA3AF',
+                fontSize: '11px',
+              }}
+            >
+              {description}
+            </p>
+          )}
+        </div>
+
+        {action}
+      </div>
+
+      {children}
+    </section>
+  )
+}
+
+function ProjectRow({
+  project,
+  role,
+}) {
+  if (!project) return null
+
+  return (
+    <div
+      style={{
         display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        marginBottom: '32px',
-        gap: '16px',
-        flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '14px',
-            background: `linear-gradient(135deg, ${theme.action.primary}, #818CF8)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '22px',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '13px 14px',
+        background: '#F9FAFB',
+        border: '1px solid #E5E7EB',
+        borderRadius: '11px',
+      }}
+    >
+      <div
+        style={{
+          width: '34px',
+          height: '34px',
+          borderRadius: '9px',
+          background:
+            project.status === 'completed'
+              ? '#ECFDF5'
+              : '#EEF2FF',
+          color:
+            project.status === 'completed'
+              ? '#059669'
+              : '#4F46E5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {project.status === 'completed' ? '✓' : '●'}
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <div
+          style={{
+            color: '#111827',
+            fontSize: '13px',
             fontWeight: 700,
-            color: '#fff',
-            flexShrink: 0,
-          }}>
-            {profile?.full_name?.[0]?.toUpperCase() || '?'}
+            marginBottom: '3px',
+          }}
+        >
+          {project.title}
+        </div>
+
+        <div
+          style={{
+            color: '#9CA3AF',
+            fontSize: '11px',
+          }}
+        >
+          {role} · {project.status}
+        </div>
+      </div>
+
+      <Link
+        href={`/projects/${project.id}`}
+        style={{
+          padding: '6px 10px',
+          border: '1px solid #E5E7EB',
+          background: '#FFFFFF',
+          color: '#374151',
+          borderRadius: '7px',
+          textDecoration: 'none',
+          fontSize: '11px',
+          fontWeight: 600,
+        }}
+      >
+        Open
+      </Link>
+    </div>
+  )
+}
+
+function PostCard({ post }) {
+  return (
+    <div
+      style={{
+        padding: '16px',
+        background: '#F9FAFB',
+        border: '1px solid #EEF0F3',
+        borderRadius: '13px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '12px',
+          marginBottom: '8px',
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            color: '#111827',
+            fontSize: '14px',
+          }}
+        >
+          {post.title}
+        </h3>
+
+        <span
+          style={{
+            color: '#9CA3AF',
+            fontSize: '10px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {new Date(post.created_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      <p
+        style={{
+          margin: '0 0 10px',
+          color: '#4B5563',
+          fontSize: '13px',
+          lineHeight: 1.7,
+        }}
+      >
+        {post.content}
+      </p>
+{post.image_url && (
+  <div
+    style={{
+      marginBottom: '12px',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      border: '1px solid #E5E7EB',
+      background: '#FFFFFF',
+    }}
+  >
+    <img
+      src={post.image_url}
+      alt={post.title}
+      style={{
+        display: 'block',
+        width: '100%',
+        maxHeight: '420px',
+        objectFit: 'cover',
+      }}
+    />
+  </div>
+)}
+      {post.projects && (
+        <span
+          style={{
+            color: '#5B4FE8',
+            fontSize: '11px',
+            fontWeight: 600,
+          }}
+        >
+          📁 {post.projects.title}
+        </span>
+      )}
+
+      {post.skills_highlighted?.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '5px',
+            marginTop: '9px',
+          }}
+        >
+          {post.skills_highlighted.map((skill, index) => (
+            <span
+              key={`${skill}-${index}`}
+              style={{
+                padding: '3px 8px',
+                borderRadius: '20px',
+                background: '#EEF2FF',
+                color: '#4338CA',
+                fontSize: '10px',
+                fontWeight: 600,
+              }}
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+function CertificateList({ certificates }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns:
+          'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '12px',
+      }}
+    >
+      {certificates.map(certificate => (
+        <div
+          key={certificate.id}
+          style={{
+            padding: '16px',
+            border: '1px solid #DBEAFE',
+            background:
+              'linear-gradient(135deg, #F8FAFF, #EFF6FF)',
+            borderRadius: '14px',
+            display: 'flex',
+            gap: '13px',
+          }}
+        >
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: '#DBEAFE',
+              color: '#1D4ED8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              fontSize: '19px',
+            }}
+          >
+            ◈
           </div>
 
           <div>
-            <h1 style={{
-              fontSize: '20px',
-              fontWeight: 700,
-              color: theme.text.primary,
-              margin: '0 0 4px',
-              letterSpacing: '-0.3px',
-            }}>
-              {profile?.full_name || 'Your Name'}
-            </h1>
-
-            {profile?.headline && (
-              <p style={{
+            <div
+              style={{
                 fontSize: '14px',
-                color: theme.text.secondary,
-                margin: '0 0 2px',
-              }}>
-                {profile.headline}
-              </p>
+                fontWeight: 700,
+                color: '#0F172A',
+              }}
+            >
+              {certificate.name}
+            </div>
+
+            {certificate.issuing_organization && (
+              <div
+                style={{
+                  marginTop: '4px',
+                  color: '#475569',
+                  fontSize: '12px',
+                }}
+              >
+                {certificate.issuing_organization}
+              </div>
             )}
 
-            {profile?.username && (
-              <p style={{
-                fontSize: '13px',
-                color: theme.text.tertiary,
-                margin: 0,
-              }}>
-                @{profile.username}
-              </p>
+            {certificate.issue_date && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  color: '#94A3B8',
+                  fontSize: '11px',
+                }}
+              >
+                Issued{' '}
+                {new Date(
+                  certificate.issue_date
+                ).toLocaleDateString('en-US', {
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </div>
+            )}
+
+            {certificate.credential_url && (
+              <a
+                href={certificate.credential_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginTop: '8px',
+                  color: '#2563EB',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                View credential ↗
+              </a>
             )}
           </div>
         </div>
-
-        <Link href="/profile/edit" style={{
-          padding: '8px 16px',
-          background: theme.bg.hover,
-          border: `1px solid ${theme.border.light}`,
-          borderRadius: '10px',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: theme.text.primary,
-          textDecoration: 'none',
-          whiteSpace: 'nowrap',
-        }}>
-          Edit profile
-        </Link>
+      ))}
+    </div>
+  )
+}
+function EmptyState({
+  icon,
+  message,
+}) {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '24px',
+        color: '#9CA3AF',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '26px',
+          marginBottom: '7px',
+        }}
+      >
+        {icon}
       </div>
 
-      {/* Readiness score */}
-      <div style={{
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '16px',
-        padding: '20px 24px',
-        marginBottom: '16px',
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '12px',
-        }}>
-          <span style={{
-            fontSize: '14px',
-            fontWeight: 600,
-            color: theme.text.primary,
-          }}>
-            Readiness score
-          </span>
-
-          <span style={{
-            fontSize: '26px',
-            fontWeight: 700,
-            color: scoreColor(score),
-            letterSpacing: '-0.5px',
-          }}>
-            {score}%
-          </span>
-        </div>
-
-        <div style={{
-          height: '6px',
-          background: theme.border.light,
-          borderRadius: '3px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%',
-            width: `${score}%`,
-            background: scoreColor(score),
-            borderRadius: '3px',
-          }} />
-        </div>
-
-        {score === 0 && (
-          <p style={{
-            fontSize: '13px',
-            color: theme.text.secondary,
-            margin: '12px 0 0',
-          }}>
-            Upload your CV to calculate your score.{' '}
-            <Link href="/profile/edit" style={{
-              color: theme.text.indigo,
-              textDecoration: 'none',
-              fontWeight: 500,
-            }}>
-              Go to profile edit →
-            </Link>
-          </p>
-        )}
-      </div>
-
-      {/* Skills */}
-      <div style={{
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '16px',
-        padding: '20px 24px',
-        marginBottom: '16px',
-      }}>
-        <h2 style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          margin: '0 0 16px',
-        }}>
-          Skills ({skills.length})
-        </h2>
-
-        {skills.length === 0 ? (
-          <p style={{
-            fontSize: '14px',
-            color: theme.text.secondary,
-            margin: 0,
-          }}>
-            No skills yet. They will appear here after your CV is analyzed.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {skills.map((us, i) => (
-              <span key={i} style={{
-                padding: '5px 12px',
-                background: theme.bg.indigoSoft,
-                color: theme.text.indigo,
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 500,
-              }}>
-                {us.skills?.name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* About */}
-      <div style={{
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '16px',
-        padding: '20px 24px',
-        marginBottom: '16px',
-      }}>
-        <h2 style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          margin: '0 0 12px',
-        }}>
-          About
-        </h2>
-
-        <p style={{
-          fontSize: '14px',
-          color: theme.text.secondary,
-          margin: '0 0 16px',
-          lineHeight: 1.7,
-        }}>
-          {profile?.bio || 'No bio yet.'}
-        </p>
-
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}>
-          {profile?.university && (
-            <span style={{ fontSize: '13px', color: theme.text.secondary }}>
-              🎓 {profile.university}{profile?.graduation_year ? ` · ${profile.graduation_year}` : ''}
-            </span>
-          )}
-
-          {profile?.github_url && (
-            <a href={profile.github_url} target="_blank" rel="noopener noreferrer" style={{
-              fontSize: '13px',
-              color: theme.text.indigo,
-              textDecoration: 'none',
-            }}>
-              💻 GitHub →
-            </a>
-          )}
-
-          {profile?.linkedin_url && (
-            <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" style={{
-              fontSize: '13px',
-              color: theme.text.indigo,
-              textDecoration: 'none',
-            }}>
-              🔗 LinkedIn →
-            </a>
-          )}
-
-          {profile?.portfolio_url && (
-            <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer" style={{
-              fontSize: '13px',
-              color: theme.text.indigo,
-              textDecoration: 'none',
-            }}>
-              🌐 Portfolio →
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* My Projects */}
-      <section style={{
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '16px',
-        padding: '20px 24px',
-        marginBottom: '16px',
-      }}>
-        <h2 style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          margin: '0 0 16px',
-        }}>
-          My Projects
-        </h2>
-
-        {!myProjects || myProjects.length === 0 ? (
-          <p style={{ fontSize: '14px', color: theme.text.secondary, margin: 0 }}>
-            You have not created any projects yet.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {myProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Joined Projects */}
-      <section style={{
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '16px',
-        padding: '20px 24px',
-      }}>
-        <h2 style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          color: theme.text.primary,
-          margin: '0 0 16px',
-        }}>
-          Joined Projects
-        </h2>
-
-        {activeJoinedProjects.length === 0 ? (
-          <p style={{ fontSize: '14px', color: theme.text.secondary, margin: 0 }}>
-            You have not joined any projects yet.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {activeJoinedProjects.map((member) => (
-              <ProjectCard
-                key={member.id}
-                project={member.projects}
-                role={member.role_in_project}
-                joinedAt={member.joined_at}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
+      <p
+        style={{
+          margin: 0,
+          fontSize: '12px',
+        }}
+      >
+        {message}
+      </p>
+    </div>
   )
 }
