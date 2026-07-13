@@ -152,31 +152,96 @@ export default async function WorkspacePage({ params, searchParams }) {
       )}
 
       {/* Team row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '13px', color: theme.text.secondary, fontWeight: 500 }}>Team:</span>
-        {enrichedTeamMembers?.map((tm, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '4px 10px', background: theme.bg.card,
-            border: `1px solid ${theme.border.light}`, borderRadius: '20px',
-          }}>
-            <div style={{
-              width: '20px', height: '20px', borderRadius: '50%',
-              background: theme.action.primary, display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', color: '#fff', fontWeight: 600,
-            }}>
-              {tm.profiles?.full_name?.[0]?.toUpperCase()}
-            </div>
-            <span style={{ fontSize: '12px', color: theme.text.primary, fontWeight: 500 }}>
-              {tm.profiles?.full_name}
-            </span>
-            {tm.role_in_project && (
-              <span style={{ fontSize: '11px', color: theme.text.tertiary }}>· {tm.role_in_project}</span>
-            )}
-          </div>
-        ))}
+    <div
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+  }}
+>
+  <span
+    style={{
+      fontSize: '13px',
+      color: theme.text.secondary,
+      fontWeight: 500,
+    }}
+  >
+    Team:
+  </span>
+
+  {enrichedTeamMembers?.map((tm, i) => (
+    <Link
+      key={tm.profiles?.id || i}
+      href={`/profile/${tm.profiles?.id}`}
+      title={`View ${tm.profiles?.full_name || 'member'}'s profile`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '4px 10px',
+        background: theme.bg.card,
+        border: `1px solid ${theme.border.light}`,
+        borderRadius: '20px',
+        textDecoration: 'none',
+        transition:
+          'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+      }}
+    >
+      <div
+        style={{
+          width: '20px',
+          height: '20px',
+          borderRadius: '50%',
+          overflow: 'hidden',
+          background: theme.action.primary,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '10px',
+          color: '#fff',
+          fontWeight: 600,
+        }}
+      >
+        {tm.profiles?.avatar_url ? (
+          <img
+            src={tm.profiles.avatar_url}
+            alt={tm.profiles.full_name || 'Member'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          tm.profiles?.full_name?.[0]?.toUpperCase() || '?'
+        )}
       </div>
+
+      <span
+        style={{
+          fontSize: '12px',
+          color: theme.text.primary,
+          fontWeight: 500,
+        }}
+      >
+        {tm.profiles?.full_name}
+      </span>
+
+      {tm.role_in_project && (
+        <span
+          style={{
+            fontSize: '11px',
+            color: theme.text.tertiary,
+          }}
+        >
+          · {tm.role_in_project}
+        </span>
+      )}
+    </Link>
+  ))}
+</div>
 
       {/* Tabs */}
       <WorkspaceTabs activeTab={activeTab} projectId={projectId} />

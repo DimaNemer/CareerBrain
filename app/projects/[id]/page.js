@@ -52,8 +52,12 @@ export default async function ProjectDetailsPage({ params }) {
         description,
         status,
         created_at,
-        profiles (full_name, username)
-      `)
+       profiles (
+  id,
+  full_name,
+  username,
+  avatar_url
+)`)
       .eq('id', id)
       .is('deleted_at', null)
       .single(),
@@ -215,10 +219,13 @@ export default async function ProjectDetailsPage({ params }) {
             </p>
 
             <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm text-indigo-100/70">
-              <span className="inline-flex items-center gap-2">
-                <UserRound size={16} />
-                {project.profiles?.full_name || 'Unknown owner'}
-              </span>
+             <Link
+  href={`/profile/${project.profiles?.id}`}
+  className="inline-flex items-center gap-2 font-medium text-indigo-100/80 transition hover:text-white"
+>
+  <UserRound size={16} />
+  {project.profiles?.full_name || 'Unknown owner'}
+</Link>
               <span className="inline-flex items-center gap-2">
                 <AtSign size={16} />
                 {project.profiles?.username || '-'}
@@ -402,20 +409,35 @@ export default async function ProjectDetailsPage({ params }) {
                       key={request.id}
                       className="rounded-2xl border border-slate-200 p-5"
                     >
-                      <div className="flex items-start gap-3">
-                        <Avatar name={request.profiles?.full_name} />
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-slate-900">
-                            {request.profiles?.full_name || 'Unknown user'}
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            @{request.profiles?.username || '-'}
-                          </p>
-                        </div>
-                        <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-600">
-                          {request.status}
-                        </span>
-                      </div>
+                 <div className="flex items-start gap-3">
+  <Link
+    href={`/profile/${request.profiles?.id}`}
+    title="View applicant profile"
+    className="shrink-0"
+  >
+    <Avatar
+      name={request.profiles?.full_name}
+      avatarUrl={request.profiles?.avatar_url}
+    />
+  </Link>
+
+  <div className="min-w-0">
+    <Link
+      href={`/profile/${request.profiles?.id}`}
+      className="font-semibold text-slate-900 transition hover:text-indigo-600 hover:underline"
+    >
+      {request.profiles?.full_name || 'Unknown user'}
+    </Link>
+
+    <p className="text-xs text-slate-500">
+      @{request.profiles?.username || '-'}
+    </p>
+  </div>
+
+  <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-600">
+    {request.status}
+  </span>
+</div>
 
                       <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm">
                         <p className="font-medium text-slate-700">
@@ -435,10 +457,23 @@ export default async function ProjectDetailsPage({ params }) {
                         />
                         {request.message || 'No message provided.'}
                       </p>
+<div className="mt-4 flex flex-wrap items-center gap-2">
+  <Link
+    href={`/profile/${request.profiles?.id}`}
+    className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+  >
+    <UserRound size={14} />
+    View profile
+    <ArrowUpRight size={13} />
+  </Link>
 
-                      {request.status === 'pending' && (
+  {request.status === 'pending' && (
+    <JoinRequestActions requestId={request.id} />
+  )}
+</div>
+                      {/* {request.status === 'pending' && (
                         <JoinRequestActions requestId={request.id} />
-                      )}
+                      )} */}
                     </article>
                   ))}
                 </div>
@@ -466,17 +501,31 @@ export default async function ProjectDetailsPage({ params }) {
                       key={member.id}
                       className="rounded-2xl border border-slate-200 p-5"
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar name={member.profiles?.full_name} />
-                        <div className="min-w-0">
-                          <h3 className="truncate font-semibold text-slate-900">
-                            {member.profiles?.full_name || 'Unknown member'}
-                          </h3>
-                          <p className="truncate text-xs text-slate-500">
-                            @{member.profiles?.username || '-'}
-                          </p>
-                        </div>
-                      </div>
+                  <div className="flex items-center gap-3">
+  <Link
+    href={`/profile/${member.profiles?.id}`}
+    className="shrink-0"
+    title="View member profile"
+  >
+    <Avatar
+      name={member.profiles?.full_name}
+      avatarUrl={member.profiles?.avatar_url}
+    />
+  </Link>
+
+  <div className="min-w-0">
+    <Link
+      href={`/profile/${member.profiles?.id}`}
+      className="block truncate font-semibold text-slate-900 transition hover:text-indigo-600 hover:underline"
+    >
+      {member.profiles?.full_name || 'Unknown member'}
+    </Link>
+
+    <p className="truncate text-xs text-slate-500">
+      @{member.profiles?.username || '-'}
+    </p>
+  </div>
+</div>
 
                       <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
                         <p className="flex items-center gap-2">
@@ -491,7 +540,15 @@ export default async function ProjectDetailsPage({ params }) {
                           {new Date(member.joined_at).toLocaleDateString()}
                         </p>
                       </div>
-
+<div className="mt-4 flex flex-wrap items-center gap-2">
+  <Link
+    href={`/profile/${member.profiles?.id}`}
+    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+  >
+    <UserRound size={13} />
+    View profile
+  </Link>
+</div>
                       <MemberActions
                         memberId={member.id}
                         isOwner={isOwner}
@@ -540,10 +597,18 @@ function EmptyPanel({ icon: Icon, title, description }) {
   )
 }
 
-function Avatar({ name }) {
+function Avatar({ name, avatarUrl }) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 font-semibold text-indigo-700">
-      {(name || '?').charAt(0).toUpperCase()}
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 font-semibold text-indigo-700">
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={name || 'Profile avatar'}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        (name || '?').charAt(0).toUpperCase()
+      )}
     </span>
   )
 }
