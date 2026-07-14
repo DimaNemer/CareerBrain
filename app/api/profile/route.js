@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { updateReadinessScore } from '@/lib/scoring'
 
 export async function GET() {
   try {
@@ -17,6 +18,8 @@ export async function GET() {
         user_skills (
           id,
           proficiency_level,
+          proficiency_score,
+          evidence,
           source,
           skills (
             id,
@@ -75,7 +78,7 @@ export async function PUT(request) {
 
     updates.updated_at = new Date().toISOString()
 
-    const { data, error } = await supabase
+    const { data: updatedProfile, error } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', user.id)
@@ -86,7 +89,17 @@ export async function PUT(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ profile: data }, { status: 200 })
+    // Recalculate readiness score using the shared helper
+    await updateReadinessScore(supabase, user.id)
+    
+    // Fetch final updated profile
+    const { data: finalProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    return NextResponse.json({ profile: finalProfile }, { status: 200 })
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
   }

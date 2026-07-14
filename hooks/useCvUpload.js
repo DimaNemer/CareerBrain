@@ -58,7 +58,7 @@ export function useCvUpload({ userId }) {
     try {
       const supabase = createClient()
       const storagePath = buildCvStoragePath(userId, selectedFile.name)
-      const fileUrl = buildCvFileUrl(userId, selectedFile.name)
+      const fileUrl = `${CV_STORAGE_BUCKET}/${storagePath}`
 
       const { error: storageError } = await supabase.storage
         .from(CV_STORAGE_BUCKET)
@@ -68,6 +68,7 @@ export function useCvUpload({ userId }) {
         })
 
       if (storageError) {
+        console.error('Storage upload error:', storageError)
         if (storageError.message?.includes('already exists')) {
           setError('A file with this name already exists. Please rename your CV and try again.')
         } else {
@@ -91,7 +92,7 @@ export function useCvUpload({ userId }) {
       }
 
       setSuccess('CV uploaded successfully! Redirecting...')
-      router.push('/upload-processing')
+      router.push(`/upload-processing?id=${result.cvUpload.id}`)
       router.refresh()
     } catch {
       setError('Network error. Please check your connection and try again.')
