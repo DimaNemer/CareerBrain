@@ -39,12 +39,17 @@ export default async function WorkspacePage({ params, searchParams }) {
 
   if (!isOwner && !member) redirect('/projects')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, username')
-    .eq('id', user.id)
-    .single()
+const { data: currentUserProfile } = await supabase
+  .from('profiles')
+  .select('id, full_name, username, avatar_url')
+  .eq('id', user.id)
+  .single()
 
+const { data: ownerProfile } = await supabase
+  .from('profiles')
+  .select('id, full_name, username, avatar_url')
+  .eq('id', project.owner_id)
+  .single()
   const { data: tasks } = await supabase
     .from('tasks')
     .select(`
@@ -53,15 +58,22 @@ export default async function WorkspacePage({ params, searchParams }) {
     `)
     .eq('project_id', projectId)
     .order('created_at', { ascending: true })
-
-  const { data: teamMembers } = await supabase
-    .from('project_members')
-    .select(`
-      role_in_project, joined_at,
-      profiles ( id, full_name, username, avatar_url )
-    `)
-    .eq('project_id', projectId)
-    .is('left_at', null)
+const { data: teamMembers = [] } = await supabase
+  .from('project_members')
+  .select(`
+    id,
+    user_id,
+    role_in_project,
+    joined_at,
+    profiles (
+      id,
+      full_name,
+      username,
+      avatar_url
+    )
+  `)
+  .eq('project_id', projectId)
+  .is('left_at', null)
 
   const { data: completionRequest } = await supabase
     .from('completion_requests')
@@ -71,17 +83,36 @@ export default async function WorkspacePage({ params, searchParams }) {
     .maybeSingle()
 
   // Add owner to team display if not already in members
-  const ownerInMembers = teamMembers?.some(tm => tm.profiles?.id === project.owner_id)
-  const enrichedTeamMembers = ownerInMembers
-    ? teamMembers
-    : [
-        {
-          role_in_project: 'Owner',
-          profiles: { id: user.id, full_name: profile?.full_name, username: profile?.username, avatar_url: null },
-        },
-        ...(teamMembers || []),
-      ]
+const ownerEntry = ownerProfile
+  ? {
+      membership_id: `owner-${ownerProfile.id}`,
+      id: `owner-${ownerProfile.id}`,
+      user_id: ownerProfile.id,
+      role_in_project: 'Owner',
+      joined_at: null,
+      profiles: ownerProfile,
+    }
+  : null
 
+const validMemberEntries = (teamMembers || [])
+  .filter(
+    teamMember =>
+      teamMember.profiles?.id &&
+      teamMember.user_id
+  )
+  .filter(
+    teamMember =>
+      teamMember.user_id !== project.owner_id
+  )
+  .map(teamMember => ({
+    ...teamMember,
+    membership_id: `member-${teamMember.id}`,
+  }))
+
+const enrichedTeamMembers = [
+  ...(ownerEntry ? [ownerEntry] : []),
+  ...validMemberEntries,
+]
   const isCompleted = project.status === 'completed'
 
   // Task stats for overview
@@ -115,7 +146,7 @@ export default async function WorkspacePage({ params, searchParams }) {
               background: isCompleted ? theme.bg.emeraldSoft : theme.bg.indigoSoft,
               color: isCompleted ? theme.text.emerald : theme.text.indigo,
             }}>
-              {isCompleted ? '✅ Completed' : '🔵 In Progress'}
+              {isCompleted ? '✅ Completed' : '🔵 Active'}
             </span>
             {isOwner && <span style={{ fontSize: '12px', color: theme.text.tertiary }}>You are the owner</span>}
             {totalTasks > 0 && (
@@ -150,9 +181,8 @@ export default async function WorkspacePage({ params, searchParams }) {
           </div>
         </div>
       )}
-
-      {/* Team row */}
-    <div
+{/* Team row */}
+<div
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -171,76 +201,83 @@ export default async function WorkspacePage({ params, searchParams }) {
     Team:
   </span>
 
-  {enrichedTeamMembers?.map((tm, i) => (
-    <Link
-      key={tm.profiles?.id || i}
-      href={`/profile/${tm.profiles?.id}`}
-      title={`View ${tm.profiles?.full_name || 'member'}'s profile`}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '4px 10px',
-        background: theme.bg.card,
-        border: `1px solid ${theme.border.light}`,
-        borderRadius: '20px',
-        textDecoration: 'none',
-        transition:
-          'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
-      }}
-    >
-      <div
+  {enrichedTeamMembers
+    .filter(teamMember => teamMember.profiles?.id)
+    .map((teamMember, index) => (
+      <Link
+        key={
+          teamMember.membership_id ||
+          teamMember.id ||
+          `${teamMember.profiles.id}-${teamMember.role_in_project || 'member'}-${index}`
+        }
+        href={`/profile/${teamMember.profiles.id}`}
+        title={`View ${
+          teamMember.profiles.full_name || 'member'
+        }'s profile`}
         style={{
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          background: theme.action.primary,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#fff',
-          fontWeight: 600,
+          gap: '6px',
+          padding: '4px 10px',
+          background: theme.bg.card,
+          border: `1px solid ${theme.border.light}`,
+          borderRadius: '20px',
+          textDecoration: 'none',
         }}
       >
-        {tm.profiles?.avatar_url ? (
-          <img
-            src={tm.profiles.avatar_url}
-            alt={tm.profiles.full_name || 'Member'}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
-        ) : (
-          tm.profiles?.full_name?.[0]?.toUpperCase() || '?'
-        )}
-      </div>
-
-      <span
-        style={{
-          fontSize: '12px',
-          color: theme.text.primary,
-          fontWeight: 500,
-        }}
-      >
-        {tm.profiles?.full_name}
-      </span>
-
-      {tm.role_in_project && (
-        <span
+        <div
           style={{
-            fontSize: '11px',
-            color: theme.text.tertiary,
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: theme.action.primary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: '#fff',
+            fontWeight: 600,
+            flexShrink: 0,
           }}
         >
-          · {tm.role_in_project}
+          {teamMember.profiles.avatar_url ? (
+            <img
+              src={teamMember.profiles.avatar_url}
+              alt={teamMember.profiles.full_name || 'Member'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            teamMember.profiles.full_name?.[0]?.toUpperCase() || '?'
+          )}
+        </div>
+
+        <span
+          style={{
+            fontSize: '12px',
+            color: theme.text.primary,
+            fontWeight: 500,
+          }}
+        >
+          {teamMember.profiles.full_name}
         </span>
-      )}
-    </Link>
-  ))}
+
+        {teamMember.role_in_project && (
+          <span
+            style={{
+              fontSize: '11px',
+              color: theme.text.tertiary,
+            }}
+          >
+            · {teamMember.role_in_project}
+          </span>
+        )}
+      </Link>
+    ))}
 </div>
 
       {/* Tabs */}
@@ -263,7 +300,9 @@ export default async function WorkspacePage({ params, searchParams }) {
               <ChatPanel
                 projectId={projectId}
                 currentUserId={user.id}
-                currentUserName={profile?.full_name || 'You'}
+                currentUserName={
+  currentUserProfile?.full_name || 'You'
+}
               />
             </div>
           </div>
