@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Toaster, toast } from 'sonner'
 import { Heart, MapPin, Clock, AlertTriangle, ArrowRight, Briefcase, Target, BookmarkCheck } from 'lucide-react'
+import MissingSkillBadge from '@/components/MissingSkillBadge'
 
 function getSafeUrl(url) {
   if (!url) return null
@@ -217,10 +218,7 @@ export default function SavedOpportunitiesPage() {
                         <span className="text-[11px] uppercase text-rose-600 font-bold tracking-wider block mb-1.5">Missing Skills to Study</span>
                         <div className="flex flex-wrap gap-1.5">
                           {missingSkillsList.map((gap) => (
-                            <span key={gap.id} className="text-[11px] font-semibold px-2 py-1 rounded-lg bg-white text-rose-500 border border-dashed border-amber-300 inline-flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              {gap.skills?.name || 'Required Skill'}
-                            </span>
+                            <MissingSkillBadge key={gap.id} skillName={gap.skills?.name} skillId={gap.skills?.id} />
                           ))}
                         </div>
                       </div>
@@ -235,12 +233,7 @@ export default function SavedOpportunitiesPage() {
                           {daysAgoText}
                         </span>
                       )}
-                      {matchData?.estimated_time_to_close && (
-                        <span className="text-sm text-blue-600 font-medium inline-flex items-center gap-1.5">
-                          <ArrowRight className="w-3.5 h-3.5" />
-                          {matchData.estimated_time_to_close}
-                        </span>
-                      )}
+
                     </div>
                     {safeApplyUrl && (
                       <a href={safeApplyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold no-underline hover:bg-blue-700 active:scale-[0.97] transition-all duration-200 shadow-sm hover:shadow-md">
