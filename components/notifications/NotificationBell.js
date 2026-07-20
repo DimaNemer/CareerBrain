@@ -10,7 +10,6 @@ export default function NotificationBell({ userId }) {
   const dropdownRef = useRef(null)
   const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications(userId)
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -21,7 +20,6 @@ export default function NotificationBell({ userId }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  // Close on Escape
   useEffect(() => {
     function handleKey(e) {
       if (e.key === 'Escape') setOpen(false)
@@ -32,7 +30,6 @@ export default function NotificationBell({ userId }) {
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
-      {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -78,7 +75,6 @@ export default function NotificationBell({ userId }) {
         )}
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div style={{
           position: 'absolute',
@@ -95,7 +91,6 @@ export default function NotificationBell({ userId }) {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {/* Header */}
           <div style={{
             padding: '16px 16px 12px',
             borderBottom: `1px solid ${theme.border.light}`,
@@ -135,7 +130,6 @@ export default function NotificationBell({ userId }) {
             )}
           </div>
 
-          {/* Notification List */}
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {loading ? (
               <div style={{ padding: '40px 16px', textAlign: 'center', color: theme.text.tertiary, fontSize: '13px' }}>

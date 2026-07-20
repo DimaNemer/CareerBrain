@@ -57,7 +57,7 @@ export async function GET() {
             missing_skills (
               id,
               skills (
-                name
+                id, name
               )
             )
           )

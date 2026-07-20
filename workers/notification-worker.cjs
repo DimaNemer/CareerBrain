@@ -76,10 +76,7 @@ async function processUser(user) {
 
     const existingNotif = existingMap.get(job.id)
 
-    // Skip if it was already created AND already emailed (or doesn't need email)
-    if (existingNotif && existingNotif.is_emailed) continue
-    // If it already exists and we don't have an email to send, also skip
-    if (existingNotif && !userEmail) continue
+    if (existingNotif) continue
 
     const matchedSkills = (match.missing_skills || [])
       .map(ms => ms.skills?.name).filter(Boolean).slice(0, 3)
@@ -114,9 +111,26 @@ async function processUser(user) {
     }
 
     if (userEmail && notifId) {
-      const VERIFIED_EMAIL = 'sabbadih5@gmail.com'
-      const targetEmail = VERIFIED_EMAIL
+      const targetEmail = userEmail
       const percent = Math.round(match.match_score * 100)
+
+      // ── Dev guard ─────────────────────────────────────────────────────────
+      // Resend's free plan (using onboarding@resend.dev) redirects ALL emails
+      // to the verified address, so badihkabir / badih00 emails end up in
+      // sabbadih5's inbox. Until a real domain is configured, only send to the
+      // verified dev address and skip everyone else.
+      const DEV_VERIFIED_EMAIL = 'sabbadih5@gmail.com'
+      const isUsingResendSandbox = !process.env.NOTIFICATION_EMAIL_FROM?.includes('@') ||
+        process.env.NOTIFICATION_EMAIL_FROM.includes('resend.dev') ||
+        process.env.NODE_ENV !== 'production'
+
+      if (isUsingResendSandbox && targetEmail !== DEV_VERIFIED_EMAIL) {
+        console.log('  [DEV] Skipping email to', targetEmail, '(not verified sender — would redirect to', DEV_VERIFIED_EMAIL + ')')
+        // Still mark notification as created in DB, just no email sent
+        continue
+      }
+      // ── End dev guard ──────────────────────────────────────────────────────
+
       const { error: eErr } = await resend.emails.send({
         from: 'Career Brain <onboarding@resend.dev>',
         to: [targetEmail],

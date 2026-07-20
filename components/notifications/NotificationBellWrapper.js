@@ -9,9 +9,20 @@ export default function NotificationBellWrapper() {
 
   useEffect(() => {
     const supabase = createClient()
+
+    // Seed the initial user state immediately
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUserId(user.id)
+      setUserId(user?.id ?? null)
     })
+
+    // Then keep in sync with auth changes (sign-in / sign-out / token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   if (!userId) return null

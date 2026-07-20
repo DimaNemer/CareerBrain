@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Toaster, toast } from 'sonner'
 import { Heart, MapPin, Clock, Search, AlertTriangle, ArrowRight, RefreshCw, X, Briefcase, Target, BookmarkCheck, Sparkles, TrendingUp, Zap, ChevronRight, ChevronDown, ArrowUpDown, CheckCircle2 } from 'lucide-react'
+import MissingSkillBadge from '@/components/MissingSkillBadge'
 
 function getSafeUrl(url) {
   if (!url) return null
@@ -272,6 +273,11 @@ export default function OpportunitiesPage() {
       } catch {}
     }
     load(); loadSaved(); loadApplied()
+    // Auto-load Picks (top 5 matches)
+    fetch('/api/opportunities/recommendations?limit=5')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.opportunities) setRecsTopPicks(data.opportunities) })
+      .catch(() => {})
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false)
       if (sortRef.current && !sortRef.current.contains(e.target)) setShowSortMenu(false)
@@ -454,9 +460,7 @@ export default function OpportunitiesPage() {
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {missingSkillsList.map((gap) => (
-                    <span key={gap.id} className="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-white/80 text-rose-600 border border-dashed border-amber-300/60 inline-flex items-center gap-1">
-                      {gap.skills?.name || 'Required Skill'}
-                    </span>
+                    <MissingSkillBadge key={gap.id} skillName={gap.skills?.name} skillId={gap.skills?.id} />
                   ))}
                 </div>
               </div>
@@ -471,12 +475,7 @@ export default function OpportunitiesPage() {
                   {daysAgoText}
                 </span>
               )}
-              {matchData?.estimated_time_to_close && (
-                <span className="text-sm text-indigo-600 font-medium inline-flex items-center gap-1.5">
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  {matchData.estimated_time_to_close}
-                </span>
-              )}
+
             </div>
             {safeApplyUrl && (
               <button onClick={(e) => handleApply(e, opportunity.id, safeApplyUrl)}

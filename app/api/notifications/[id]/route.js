@@ -23,6 +23,10 @@ export async function PATCH(request, { params }) {
       .single()
 
     if (error) {
+      // PGRST116 = no rows returned by .single() → notification not found
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
+      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

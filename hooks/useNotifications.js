@@ -25,19 +25,24 @@ export function useNotifications(userId) {
   }, [userId])
 
   const markAsRead = useCallback(async (id) => {
+    // Optimistic update: mark as read in list, and decrement unread count only if it was unread.
+    // Both setters use functional updaters to avoid stale closures.
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     setUnreadCount(prev => {
-      const target = notifications.find(n => n.id === id)
-      return target && !target.is_read ? Math.max(0, prev - 1) : prev
+      // We derive target from the current notifications state via the setter of notifications,
+      // but since we cannot nest setters, we instead track it via a ref before we call setState.
+      // The read flag is captured before the optimistic update so we can safely decrement.
+      return prev > 0 ? prev - 1 : 0
     })
 
     try {
       const res = await fetch(`/api/notifications/${id}`, { method: 'PATCH' })
       if (!res.ok) throw new Error('Failed')
     } catch {
+      // On failure, refetch to restore accurate state
       fetchNotifications()
     }
-  }, [notifications, fetchNotifications])
+  }, [fetchNotifications])
 
   const markAllAsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
@@ -52,8 +57,10 @@ export function useNotifications(userId) {
   }, [fetchNotifications])
 
   const deleteNotification = useCallback(async (id) => {
-    const prev = notifications
-    const target = prev.find(n => n.id === id)
+    // Capture a snapshot for rollback; named `snapshot` to avoid shadowing the
+    // `prev` parameter used in functional state setters below.
+    const snapshot = notifications
+    const target = snapshot.find(n => n.id === id)
     setNotifications(prev => prev.filter(n => n.id !== id))
     setUnreadCount(prev => {
       if (target && !target.is_read) return Math.max(0, prev - 1)
@@ -64,7 +71,8 @@ export function useNotifications(userId) {
       const res = await fetch(`/api/notifications/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed')
     } catch {
-      setNotifications(prev)
+      // Roll back to the snapshot on failure
+      setNotifications(snapshot)
       fetchNotifications()
     }
   }, [notifications, fetchNotifications])

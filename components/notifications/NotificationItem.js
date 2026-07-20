@@ -53,7 +53,6 @@ export default function NotificationItem({ notification, onRead, onDelete }) {
       onMouseEnter={e => { e.currentTarget.style.background = theme.bg.hover; e.currentTarget.style.transform = 'scale(1.005)' }}
       onMouseLeave={e => { e.currentTarget.style.background = isUnread ? typeStyle.bg : theme.bg.card; e.currentTarget.style.transform = 'scale(1)' }}
     >
-      {/* Icon */}
       <div style={{
         width: '36px',
         height: '36px',
@@ -69,7 +68,6 @@ export default function NotificationItem({ notification, onRead, onDelete }) {
         {typeStyle.icon}
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
           <span style={{
@@ -117,7 +115,6 @@ export default function NotificationItem({ notification, onRead, onDelete }) {
         </span>
       </div>
 
-      {/* Delete button */}
       {onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(notification.id) }}
