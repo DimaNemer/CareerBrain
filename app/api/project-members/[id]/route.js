@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
+import { sendProjectNotification } from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(request, { params }) {
@@ -30,6 +31,7 @@ export async function PATCH(request, { params }) {
         projects (
           id,
           owner_id,
+          title,
           deleted_at
         )
       `)
@@ -50,6 +52,12 @@ export async function PATCH(request, { params }) {
     if (action === 'remove' && !isOwner) {
       return NextResponse.json({ error: 'Only the project owner can remove members' }, { status: 403 })
     }
+
+    const { data: memberProfile } = await supabase
+      .from('profiles')
+      .select('full_name, username')
+      .eq('id', member.user_id)
+      .maybeSingle()
 
     const { data: joinRequest, error: joinRequestError } = await supabase
       .from('join_requests')
@@ -119,6 +127,27 @@ export async function PATCH(request, { params }) {
 
     if (projectStatusError) {
       return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
+    }
+
+    if (action === 'leave') {
+      const memberName = memberProfile?.full_name || memberProfile?.username || 'A member'
+      await sendProjectNotification({
+        recipientId: member.projects.owner_id,
+        type: 'project_member_left',
+        title: `A member left ${member.projects.title}`,
+        message: `${memberName} left your project ${member.projects.title}.`,
+        projectId: member.project_id,
+        data: { member_id: member.user_id },
+      })
+    } else {
+      await sendProjectNotification({
+        recipientId: member.user_id,
+        type: 'project_member_removed',
+        title: `Removed from ${member.projects.title}`,
+        message: `The project owner removed you from ${member.projects.title}.`,
+        projectId: member.project_id,
+        data: { member_id: member.user_id },
+      })
     }
 
     return NextResponse.json(

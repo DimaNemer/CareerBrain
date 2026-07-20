@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import { sendProjectNotification } from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 export async function GET(request) {
@@ -99,7 +100,7 @@ export async function POST(request) {
 
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('id, owner_id, status, deleted_at')
+      .select('id, owner_id, title, status, deleted_at')
       .eq('id', projectId)
       .is('deleted_at', null)
       .single()
@@ -124,7 +125,7 @@ export async function POST(request) {
 
     const { data: role, error: roleError } = await supabase
       .from('project_roles')
-      .select('id, project_id, quantity_needed')
+      .select('id, project_id, role_title, quantity_needed')
       .eq('id', projectRoleId)
       .eq('project_id', projectId)
       .single()
@@ -168,6 +169,26 @@ export async function POST(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const { data: requesterProfile } = await supabase
+      .from('profiles')
+      .select('full_name, username')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const requesterName = requesterProfile?.full_name || requesterProfile?.username || 'A user'
+    await sendProjectNotification({
+      recipientId: project.owner_id,
+      type: 'project_join_request',
+      title: `New join request for ${project.title}`,
+      message: `${requesterName} requested to join your project as ${role.role_title}.`,
+      projectId,
+      data: {
+        join_request_id: requestRow.id,
+        requester_id: user.id,
+        project_role_id: projectRoleId,
+      },
+    })
 
     return NextResponse.json({ request: requestRow }, { status: 201 })
   } catch {

@@ -9,6 +9,7 @@ import {
   FolderSearch,
   RotateCcw,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
 } from 'lucide-react'
@@ -21,7 +22,7 @@ const STATUS_STYLES = {
   archived: 'border-slate-200 bg-slate-100 text-slate-600',
 }
 
-export default function ProjectBrowser({ projects }) {
+export default function ProjectBrowser({ projects, currentUserId }) {
   const [search, setSearch] = useState('')
   const [skillSearch, setSkillSearch] = useState('')
   const [roleTitle, setRoleTitle] = useState('')
@@ -240,6 +241,13 @@ export default function ProjectBrowser({ projects }) {
                   <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">
                     {project.description || 'No description provided.'}
                   </p>
+
+                  {project.owner_id === currentUserId && (
+                    <span className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700">
+                      <ShieldCheck size={13} />
+                      You own this project
+                    </span>
+                  )}
 
                   <div className="mt-5 space-y-3">
                     <div>

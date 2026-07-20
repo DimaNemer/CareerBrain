@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { syncProjectStatusWithRoles } from '@/lib/project-status-server'
+import { sendProjectNotification } from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(request, { params }) {
@@ -30,6 +31,7 @@ export async function PATCH(request, { params }) {
         projects (
           id,
           owner_id,
+          title,
           deleted_at
         ),
         project_roles (
@@ -70,6 +72,15 @@ export async function PATCH(request, { params }) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
+
+      await sendProjectNotification({
+        recipientId: joinRequest.user_id,
+        type: 'project_join_rejected',
+        title: `Join request rejected for ${joinRequest.projects.title}`,
+        message: `Your request to join ${joinRequest.projects.title} as ${joinRequest.project_roles.role_title} was rejected.`,
+        projectId: joinRequest.project_id,
+        data: { join_request_id: joinRequest.id },
+      })
 
       return NextResponse.json({ request: data }, { status: 200 })
     }
@@ -116,6 +127,15 @@ export async function PATCH(request, { params }) {
     if (projectStatusError) {
       return NextResponse.json({ error: projectStatusError.message }, { status: 500 })
     }
+
+    await sendProjectNotification({
+      recipientId: joinRequest.user_id,
+      type: 'project_join_accepted',
+      title: `Welcome to ${joinRequest.projects.title}`,
+      message: `Your request to join ${joinRequest.projects.title} as ${joinRequest.project_roles.role_title} was accepted.`,
+      projectId: joinRequest.project_id,
+      data: { join_request_id: joinRequest.id },
+    })
 
     return NextResponse.json(
       { message: 'Join request accepted successfully' },
