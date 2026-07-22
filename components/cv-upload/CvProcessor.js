@@ -67,6 +67,7 @@ export default function CvProcessor({ uploadId }) {
   // Start logic
   useEffect(() => {
     if (!uploadId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setErrorMessage('Missing upload identification.')
       setStatus('Failed')
       return

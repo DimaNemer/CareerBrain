@@ -41,6 +41,7 @@ export default async function PrivateProfilePage() {
 
   if (profileError) {
     console.error('Private profile error:', profileError)
+
   }
 
   const { data: certificates = [] } = await supabase
@@ -208,7 +209,10 @@ export default async function PrivateProfilePage() {
         text: 'Include industry-specific domain knowledge relevant to your target positions (e.g. finance, healthcare, AI).'
       })
     }
+
   }
+
+
 
   return (
     <div
