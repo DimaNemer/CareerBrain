@@ -26,6 +26,8 @@ export default async function PrivateProfilePage() {
       user_skills (
         id,
         proficiency_level,
+        proficiency_score,
+        evidence,
         source,
         skills (
           id,
@@ -39,24 +41,25 @@ export default async function PrivateProfilePage() {
 
   if (profileError) {
     console.error('Private profile error:', profileError)
+
   }
 
-const { data: certificates = [] } = await supabase
-  .from('user_certificates')
-  .select(`
-    id,
-    name,
-    issuing_organization,
-    issue_date,
-    expiration_date,
-    credential_id,
-    credential_url
-  `)
-  .eq('user_id', user.id)
-  .order('issue_date', {
-    ascending: false,
-    nullsFirst: false,
-  })
+  const { data: certificates = [] } = await supabase
+    .from('user_certificates')
+    .select(`
+      id,
+      name,
+      issuing_organization,
+      issue_date,
+      expiration_date,
+      credential_id,
+      credential_url
+    `)
+    .eq('user_id', user.id)
+    .order('issue_date', {
+      ascending: false,
+      nullsFirst: false,
+    })
 
   const { data: ownedProjects = [] } = await supabase
     .from('projects')
@@ -92,26 +95,28 @@ const { data: certificates = [] } = await supabase
       ascending: false,
     })
 
-const { data: posts = [] } = await supabase
-  .from('project_posts')
-  .select(`
-    id,
-    title,
-    content,
-    skills_highlighted,
-    image_url,
-    image_path,
-    created_at,
-    projects (
+  const { data: posts = [] } = await supabase
+    .from('project_posts')
+    .select(`
       id,
-      title
-    )
-  `)
+      title,
+      content,
+      skills_highlighted,
+      image_url,
+      image_path,
+      created_at,
+      projects (
+        id,
+        title
+      )
+    `)
     .eq('user_id', user.id)
     .order('created_at', {
       ascending: false,
     })
 
+  const score = profile?.readiness_score || 0
+  const categoryScores = profile?.category_scores || {}
   const skills = profile?.user_skills || []
 
   const verifiedSkills = skills.filter(
@@ -137,6 +142,77 @@ const { data: posts = [] } = await supabase
       .join('')
       .toUpperCase()
       .slice(0, 2) || '?'
+
+  const skillsByCategory = skills.reduce((acc, us) => {
+    const cat = us.skills?.category || 'Other relevant professional skills'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(us)
+    return acc
+  }, {})
+
+  function getProficiencyLabel(level) {
+    const labels = { 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }
+    return labels[level] || 'Beginner'
+  }
+
+  const categoryLabels = {
+    technical: 'Technical Skills',
+    communication: 'Communication Skills',
+    softSkills: 'Soft Skills',
+    language: 'Language Skills',
+    leadership: 'Leadership & Management',
+    tools: 'Tools & Software',
+    domainKnowledge: 'Domain Knowledge'
+  }
+
+  const recommendations = []
+  if (skills.length > 0) {
+    if ((categoryScores.technical || 0) < 60) {
+      recommendations.push({
+        category: 'Technical Skills',
+        text: 'Include technical projects demonstrating practical experience or add more technical programming languages/frameworks.'
+      })
+    }
+    if ((categoryScores.communication || 0) < 60) {
+      recommendations.push({
+        category: 'Communication Skills',
+        text: 'Add more evidence of communication skills, such as presentation experience, public speaking, or technical writing.'
+      })
+    }
+    if ((categoryScores.softSkills || 0) < 60) {
+      recommendations.push({
+        category: 'Soft Skills',
+        text: 'Highlight key professional soft skills like teamwork, problem-solving, or time management.'
+      })
+    }
+    if ((categoryScores.language || 0) < 60) {
+      recommendations.push({
+        category: 'Language Skills',
+        text: 'Add your language proficiencies (e.g. English, French) to complete your communication profile.'
+      })
+    }
+    if ((categoryScores.leadership || 0) < 60) {
+      recommendations.push({
+        category: 'Leadership & Management',
+        text: 'Include leadership or project management experience, such as mentoring, project lead roles, or scrum management.'
+      })
+    }
+    if ((categoryScores.tools || 0) < 60) {
+      recommendations.push({
+        category: 'Tools & Software',
+        text: 'Mention modern developer tools and software you use day-to-day (e.g. Git, Docker, Figma, Supabase).'
+      })
+    }
+    if ((categoryScores.domainKnowledge || 0) < 60) {
+      recommendations.push({
+        category: 'Domain Knowledge',
+        text: 'Include industry-specific domain knowledge relevant to your target positions (e.g. finance, healthcare, AI).'
+      })
+    }
+
+  }
+
+
 
   return (
     <div
@@ -376,6 +452,99 @@ const { data: posts = [] } = await supabase
           </Section>
         )}
 
+        {skills.length > 0 && Object.keys(categoryScores).length > 0 && (
+          <Section title="Readiness Score Breakdown">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '16px',
+            }}>
+              {Object.entries(categoryLabels).map(([key, label]) => {
+                const catScore = categoryScores[key] || 0
+                return (
+                  <div key={key} style={{
+                    background: '#F9FAFB',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '11px',
+                    padding: '12px 14px',
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '6px',
+                    }}>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#4B5563',
+                      }}>
+                        {label}
+                      </span>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: catScore >= 70 ? '#059669' : catScore >= 40 ? '#D97706' : '#DC2626',
+                      }}>
+                        {catScore}%
+                      </span>
+                    </div>
+                    <div style={{
+                      height: '5px',
+                      background: '#E5E7EB',
+                      borderRadius: '3px',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${catScore}%`,
+                        background: catScore >= 70 ? '#10B981' : catScore >= 40 ? '#F59E0B' : '#EF4444',
+                        borderRadius: '3px',
+                      }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+        )}
+
+        {recommendations.length > 0 && (
+          <Section title="Recommended Actions for Improvement" count={recommendations.length}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {recommendations.map((rec, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  padding: '12px 14px',
+                  background: '#FFFBEB',
+                  border: '1px solid #FDE68A',
+                  borderRadius: '11px',
+                }}>
+                  <span style={{ fontSize: '16px', marginTop: '2px' }}>💡</span>
+                  <div>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#B45309',
+                      display: 'block',
+                      marginBottom: '2px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.4px',
+                    }}>
+                      {rec.category}
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.5 }}>
+                      {rec.text}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
         <Section
           title="Create post"
           description="Share an achievement or completed project."
@@ -513,41 +682,107 @@ const { data: posts = [] } = await supabase
         <Section
           title="Skills"
           count={skills.length}
+          action={
+            <div style={{ display: 'flex', gap: '14px' }}>
+              <Link
+                href="/upload-cv"
+                style={{
+                  color: '#5B4FE8',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                {skills.length > 0 ? '↻ Re-upload CV' : '📄 Upload CV'}
+              </Link>
+              <Link
+                href="/profile/edit"
+                style={{
+                  color: '#5B4FE8',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                + Add skill
+              </Link>
+            </div>
+          }
         >
           {skills.length === 0 ? (
-            <EmptyState
-              icon="⚡"
-              message="No skills have been added yet."
-            />
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <EmptyState
+                icon="⚡"
+                message="No skills have been added yet. Upload your CV to extract them automatically."
+              />
+              <Link
+                href="/upload-cv"
+                style={{
+                  display: 'inline-block',
+                  marginTop: '12px',
+                  padding: '8px 18px',
+                  background: '#5B4FE8',
+                  color: '#FFFFFF',
+                  borderRadius: '9px',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                Upload CV
+              </Link>
+            </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              {skills.map((skill, index) => (
-                <span
-                  key={skill.id || index}
-                  style={{
-                    padding: '6px 11px',
-                    borderRadius: '8px',
-                    background:
-                      skill.source === 'Project'
-                        ? '#ECFDF5'
-                        : '#EEF2FF',
-                    color:
-                      skill.source === 'Project'
-                        ? '#047857'
-                        : '#4338CA',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {skill.source === 'Project' ? '✓ ' : ''}
-                  {skill.skills?.name}
-                </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {Object.entries(skillsByCategory).map(([category, catSkills]) => (
+                <div key={category}>
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#9CA3AF',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.8px',
+                    marginBottom: '10px',
+                  }}>
+                    {category}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {catSkills.map((us, i) => {
+                      const isVerified = us.source === 'Project'
+                      return (
+                        <div key={i} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 14px',
+                          background: isVerified ? '#ECFDF5' : '#EEF2FF',
+                          border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
+                          borderRadius: '10px',
+                        }}>
+                          {isVerified && (
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
+                          )}
+                          <span style={{
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: isVerified ? '#065F46' : '#3730A3',
+                          }}>
+                            {us.skills?.name}
+                          </span>
+                          <span style={{
+                            fontSize: '10px',
+                            color: isVerified ? '#10B981' : '#818CF8',
+                            fontWeight: 500,
+                          }}>
+                            {isVerified
+                              ? 'Verified'
+                              : getProficiencyLabel(us.proficiency_level)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           )}

@@ -111,12 +111,14 @@ export default function OpportunitiesPage() {
 
   useEffect(() => {
     const f = readFiltersFromURL()
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (f.location) setLocationInput(f.location)
     if (f.type) setSelectedType(f.type)
     if (f.keyword) setKeywordInput(f.keyword)
     if (f.tab) setActiveTab(f.tab)
     if (f.saved) setShowSavedOnly(true)
     if (f.sort) setSortBy(f.sort)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   useEffect(() => {

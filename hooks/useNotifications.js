@@ -80,6 +80,7 @@ export function useNotifications(userId) {
   useEffect(() => {
     if (!userId) return
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications()
 
     const supabase = createClient()
