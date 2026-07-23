@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase-server'
+import {
+  getProjectParticipantIds,
+  sendProjectNotifications,
+} from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 async function checkAccess(supabase, projectId, userId) {
   const { data: project } = await supabase
     .from('projects')
-    .select('id, owner_id')
+    .select('id, owner_id, title')
     .eq('id', projectId)
     .is('deleted_at', null)
     .single()
@@ -23,7 +27,7 @@ async function checkAccess(supabase, projectId, userId) {
 
   if (!isOwner && !member) return { access: false, status: 403, reason: 'Not a member' }
 
-  return { access: true, isOwner }
+  return { access: true, isOwner, project }
 }
 
 // GET /api/projects/[id]/meetings
@@ -77,7 +81,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { access, status, reason } = await checkAccess(supabase, projectId, user.id)
+    const { access, status, reason, project } = await checkAccess(supabase, projectId, user.id)
     if (!access) return NextResponse.json({ error: reason }, { status })
 
     const body = await request.json()
@@ -123,6 +127,21 @@ export async function POST(request, { params }) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    const participantIds = await getProjectParticipantIds(projectId)
+    const recipientIds = participantIds.filter((participantId) => participantId !== user.id)
+    const creatorName =
+      meeting.profiles?.full_name || meeting.profiles?.username || 'A project member'
+
+    await sendProjectNotifications({
+      recipientIds,
+      type: 'workspace_meeting_scheduled',
+      title: `New meeting for ${project.title}`,
+      message: `${creatorName} scheduled "${meeting.title}" for ${new Date(meeting.scheduled_at).toLocaleString()}.`,
+      projectId,
+      actionUrl: `/projects/${projectId}/workspace`,
+      data: { meeting_id: meeting.id, created_by: user.id },
+    })
 
     return NextResponse.json({ meeting }, { status: 201 })
   } catch {

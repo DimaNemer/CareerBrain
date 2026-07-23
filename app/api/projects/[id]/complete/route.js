@@ -259,6 +259,10 @@
 //   }
 // }
 import { createClient } from '@/lib/supabase-server'
+import {
+  getProjectParticipantIds,
+  sendProjectNotifications,
+} from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 export async function POST(request, { params }) {
@@ -500,6 +504,20 @@ export async function POST(request, { params }) {
         }
       }
     }
+
+    const memberIds = await getProjectParticipantIds(projectId, {
+      includeOwner: false,
+    })
+
+    await sendProjectNotifications({
+      recipientIds: memberIds,
+      type: 'workspace_project_completed',
+      title: `${project.title} is complete`,
+      message: `The project owner marked ${project.title} as completed.`,
+      projectId,
+      actionUrl: `/projects/${projectId}/workspace`,
+      data: { completed_by: user.id },
+    })
 
     return NextResponse.json(
       {

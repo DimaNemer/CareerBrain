@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase-server'
+import { sendProjectNotification } from '@/lib/project-notifications'
 import { NextResponse } from 'next/server'
 
 async function checkWorkspaceAccess(supabase, projectId, userId) {
   const { data: project } = await supabase
     .from('projects')
-    .select('id, owner_id, status')
+    .select('id, owner_id, title, status')
     .eq('id', projectId)
     .is('deleted_at', null)
     .single()
@@ -79,7 +80,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { access, reason, status } = await checkWorkspaceAccess(supabase, projectId, user.id)
+    const { access, reason, status, project } = await checkWorkspaceAccess(supabase, projectId, user.id)
     if (!access) return NextResponse.json({ error: reason }, { status })
 
     const body = await request.json()
@@ -146,6 +147,25 @@ export async function POST(request, { params }) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (assigned_to) {
+      const { data: assignerProfile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const assignerName = assignerProfile?.full_name || assignerProfile?.username || 'A project member'
+      await sendProjectNotification({
+        recipientId: assigned_to,
+        type: 'workspace_task_assigned',
+        title: `New task in ${project.title}`,
+        message: `${assignerName} assigned you the task "${task.title}".`,
+        projectId,
+        actionUrl: `/projects/${projectId}/workspace`,
+        data: { task_id: task.id, assigned_by: user.id },
+      })
+    }
 
     return NextResponse.json({ task }, { status: 201 })
   } catch {
