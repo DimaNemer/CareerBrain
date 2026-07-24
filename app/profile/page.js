@@ -7,6 +7,7 @@ import Link from 'next/link'
 import AvatarUpload from '@/components/profile/AvatarUpload'
 import CopyButton from '@/components/profile/CopyButton'
 import ProjectPostForm from '@/components/profile/ProjectPostForm'
+import AddSkillButton from '@/components/profile/AddSkillButton'
 
 export default async function PrivateProfilePage() {
   const supabase = await createClient()
@@ -143,13 +144,6 @@ export default async function PrivateProfilePage() {
       .toUpperCase()
       .slice(0, 2) || '?'
 
-  const skillsByCategory = skills.reduce((acc, us) => {
-    const cat = us.skills?.category || 'Other relevant professional skills'
-    if (!acc[cat]) acc[cat] = []
-    acc[cat].push(us)
-    return acc
-  }, {})
-
   function getProficiencyLabel(level) {
     const labels = { 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }
     return labels[level] || 'Beginner'
@@ -163,6 +157,31 @@ export default async function PrivateProfilePage() {
     leadership: 'Leadership & Management',
     tools: 'Tools & Software',
     domainKnowledge: 'Domain Knowledge'
+  }
+
+  const skillsByCategory = skills.reduce((acc, us) => {
+    const raw = us.skills?.category || 'Other relevant professional skills'
+    if (!acc[raw]) acc[raw] = []
+    acc[raw].push(us)
+    return acc
+  }, {})
+
+  const normalizedCategoryMap = {}
+  for (const cat of Object.keys(skillsByCategory)) {
+    const canonical = Object.values(categoryLabels).find(
+      v => v.toLowerCase() === cat.toLowerCase()
+    )
+    if (canonical && canonical !== cat) {
+      normalizedCategoryMap[cat] = canonical
+    }
+  }
+
+  if (Object.keys(normalizedCategoryMap).length > 0) {
+    for (const [oldKey, newKey] of Object.entries(normalizedCategoryMap)) {
+      if (!skillsByCategory[newKey]) skillsByCategory[newKey] = []
+      skillsByCategory[newKey].push(...skillsByCategory[oldKey])
+      delete skillsByCategory[oldKey]
+    }
   }
 
   const recommendations = []
@@ -695,17 +714,7 @@ export default async function PrivateProfilePage() {
               >
                 {skills.length > 0 ? '↻ Re-upload CV' : '📄 Upload CV'}
               </Link>
-              <Link
-                href="/profile/edit"
-                style={{
-                  color: '#5B4FE8',
-                  textDecoration: 'none',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                }}
-              >
-                + Add skill
-              </Link>
+              <AddSkillButton />
             </div>
           }
         >

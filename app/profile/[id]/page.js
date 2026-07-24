@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { theme } from '@/constants/colors'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { sendProfileViewNotification } from '@/lib/profile-notifications'
 
 export default async function PublicProfilePage({ params }) {
   const supabase = await createClient()
@@ -23,6 +24,12 @@ export default async function PublicProfilePage({ params }) {
     .single()
 
   if (error || !profile) notFound()
+
+  const { data: { user: viewer } } = await supabase.auth.getUser()
+
+  if (viewer && viewer.id !== id) {
+    sendProfileViewNotification({ profileOwnerId: id, viewerId: viewer.id })
+  }
 
   // Completed projects as member
   const { data: memberCompleted } = await supabase

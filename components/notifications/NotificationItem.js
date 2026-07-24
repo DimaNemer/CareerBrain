@@ -7,6 +7,7 @@ const typeColors = {
   job_match: { bg: theme.bg.indigoSoft, border: theme.border.indigo, icon: '🚀', accent: theme.text.indigo },
   application: { bg: theme.bg.emeraldSoft, border: '#D1FAE5', icon: '📋', accent: theme.text.emerald },
   skill_gap: { bg: theme.bg.amberSoft, border: '#FEF3C7', icon: '🎯', accent: theme.text.amber },
+  profile_view: { bg: '#F0F9FF', border: '#BAE6FD', icon: '👁', accent: '#0284C7' },
   general: { bg: theme.bg.card, border: theme.border.light, icon: '🔔', accent: theme.text.secondary },
 }
 
