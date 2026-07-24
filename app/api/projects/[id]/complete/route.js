@@ -259,6 +259,7 @@
 //   }
 // }
 import { createClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-service'
 import {
   getProjectParticipantIds,
   sendProjectNotifications,
@@ -415,14 +416,15 @@ export async function POST(request, { params }) {
     }
 
     /*
-     * Load project skills.
+     * Load every role and its skill. The owner earns all project-role
+     * skills; members earn only the skill attached to their own role.
      */
     const {
       data: projectRoles = [],
       error: rolesError,
     } = await supabase
       .from('project_roles')
-      .select('skill_id')
+      .select('id, role_title, skill_id')
       .eq('project_id', projectId)
       .not('skill_id', 'is', null)
 
@@ -433,7 +435,7 @@ export async function POST(request, { params }) {
       )
     }
 
-    const skillIds = [
+    const ownerSkillIds = [
       ...new Set(
         projectRoles
           .map(role => role.skill_id)
@@ -441,7 +443,7 @@ export async function POST(request, { params }) {
       ),
     ]
 
-    if (skillIds.length > 0) {
+    if (ownerSkillIds.length > 0) {
       /*
        * Load active project members.
        */
@@ -450,7 +452,7 @@ export async function POST(request, { params }) {
         error: membersError,
       } = await supabase
         .from('project_members')
-        .select('user_id')
+        .select('user_id, role_in_project')
         .eq('project_id', projectId)
         .is('left_at', null)
 
@@ -461,21 +463,132 @@ export async function POST(request, { params }) {
         )
       }
 
-      const allUserIds = [
-        ...new Set([
-          project.owner_id,
-          ...members
+      const activeMemberIds = [
+        ...new Set(
+          members
             .map(member => member.user_id)
-            .filter(Boolean),
-        ]),
+            .filter(Boolean)
+        ),
       ]
 
-      const userSkillRows = []
+      /*
+       * Accepted join requests retain the exact role ID selected by each
+       * member. This avoids granting skills from other project roles that
+       * happen to belong to the same project.
+       */
+      let acceptedRequests = []
 
-      for (const userId of allUserIds) {
-        for (const skillId of skillIds) {
+      if (activeMemberIds.length > 0) {
+        const {
+          data: requestRows = [],
+          error: requestsError,
+        } = await supabase
+          .from('join_requests')
+          .select('user_id, project_role_id')
+          .eq('project_id', projectId)
+          .eq('status', 'accepted')
+          .in('user_id', activeMemberIds)
+
+        if (requestsError) {
+          console.error(
+            'Accepted member roles error:',
+            requestsError
+          )
+        } else {
+          acceptedRequests = requestRows
+        }
+      }
+
+      const roleById = new Map(
+        projectRoles.map(role => [role.id, role])
+      )
+      const rolesByTitle = new Map()
+
+      for (const role of projectRoles) {
+        const normalizedTitle = role.role_title
+          ?.trim()
+          .toLowerCase()
+
+        if (!normalizedTitle) continue
+
+        const matchingRoles =
+          rolesByTitle.get(normalizedTitle) || []
+
+        matchingRoles.push(role)
+        rolesByTitle.set(
+          normalizedTitle,
+          matchingRoles
+        )
+      }
+
+      const memberSkillIds = new Map()
+
+      for (const requestRow of acceptedRequests) {
+        const role = roleById.get(
+          requestRow.project_role_id
+        )
+
+        if (!role?.skill_id) continue
+
+        const assignedSkills =
+          memberSkillIds.get(requestRow.user_id) ||
+          new Set()
+
+        assignedSkills.add(role.skill_id)
+        memberSkillIds.set(
+          requestRow.user_id,
+          assignedSkills
+        )
+      }
+
+      /*
+       * Older member rows may predate accepted join-request tracking.
+       * Their stored role title is used only when no exact role ID was
+       * found.
+       */
+      for (const member of members) {
+        if (
+          !member.user_id ||
+          memberSkillIds.has(member.user_id)
+        ) {
+          continue
+        }
+
+        const normalizedTitle =
+          member.role_in_project
+            ?.trim()
+            .toLowerCase()
+        const matchingRoles =
+          rolesByTitle.get(normalizedTitle) || []
+
+        if (matchingRoles.length > 0) {
+          memberSkillIds.set(
+            member.user_id,
+            new Set(
+              matchingRoles
+                .map(role => role.skill_id)
+                .filter(Boolean)
+            )
+          )
+        }
+      }
+
+      const userSkillRows = ownerSkillIds.map(
+        skillId => ({
+          user_id: project.owner_id,
+          skill_id: skillId,
+          source: 'Project',
+          proficiency_level: 2,
+        })
+      )
+
+      for (const [
+        memberId,
+        assignedSkillIds,
+      ] of memberSkillIds) {
+        for (const skillId of assignedSkillIds) {
           userSkillRows.push({
-            user_id: userId,
+            user_id: memberId,
             skill_id: skillId,
             source: 'Project',
             proficiency_level: 2,
@@ -484,8 +597,16 @@ export async function POST(request, { params }) {
       }
 
       if (userSkillRows.length > 0) {
+        /*
+         * This write includes other team members. The authenticated
+         * owner's client is correctly blocked by user_skills RLS from
+         * changing another user's profile, so use the server-only service
+         * client after the ownership check above has authorized the action.
+         */
+        const serviceSupabase =
+          createServiceClient()
         const { error: skillsError } =
-          await supabase
+          await serviceSupabase
             .from('user_skills')
             .upsert(userSkillRows, {
               onConflict: 'user_id,skill_id',
@@ -497,10 +618,13 @@ export async function POST(request, { params }) {
             skillsError
           )
 
-          /*
-           * The project remains completed even if skill
-           * synchronization fails.
-           */
+          return NextResponse.json(
+            {
+              error:
+                'The project was completed, but its skills could not be added to team profiles. Please try again.',
+            },
+            { status: 500 }
+          )
         }
       }
     }
