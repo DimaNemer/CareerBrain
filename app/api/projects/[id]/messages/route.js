@@ -143,6 +143,7 @@ export async function POST(request, { params }) {
       message: `${senderName}: ${message.content}`,
       projectId,
       actionUrl: `/projects/${projectId}/workspace`,
+      emailCooldownMinutes: 15,
       data: { message_id: message.id, sender_id: user.id },
     })
 
