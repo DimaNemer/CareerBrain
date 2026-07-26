@@ -8,6 +8,7 @@ import AvatarUpload from '@/components/profile/AvatarUpload'
 import CopyButton from '@/components/profile/CopyButton'
 import ProjectPostForm from '@/components/profile/ProjectPostForm'
 import AddSkillButton from '@/components/profile/AddSkillButton'
+import RemoveSkillButton from '@/components/profile/RemoveSkillButton'
 
 export default async function PrivateProfilePage() {
   const supabase = await createClient()
@@ -787,6 +788,9 @@ export default async function PrivateProfilePage() {
                               ? 'Verified'
                               : getProficiencyLabel(us.proficiency_level)}
                           </span>
+                          {!isVerified && (
+                            <RemoveSkillButton skillId={us.id} skillName={us.skills?.name} />
+                          )}
                         </div>
                       )
                     })}

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-service'
 import { notFound } from 'next/navigation'
 import { theme } from '@/constants/colors'
 import Link from 'next/link'
@@ -7,9 +8,10 @@ import { sendProfileViewNotification } from '@/lib/profile-notifications'
 
 export default async function PublicProfilePage({ params }) {
   const supabase = await createClient()
+  const publicSupabase = createServiceClient()
   const { id } = await params
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await publicSupabase
     .from('profiles')
     .select(`
       id, username, full_name, headline, avatar_url, bio,

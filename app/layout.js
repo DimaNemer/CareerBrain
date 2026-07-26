@@ -126,6 +126,7 @@ import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
 import NavLink from '@/components/NavLink'
 import NotificationBellWrapper from '@/components/notifications/NotificationBellWrapper'
+import UserSearch from '@/components/UserSearch'
 import { theme } from '@/constants/colors'
 
 export const metadata = {
@@ -253,7 +254,8 @@ export default async function RootLayout({ children }) {
                 </div>
               )}
 
-              <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserSearch />
                 <NotificationBellWrapper />
                 <LogoutButton />
               </div>
