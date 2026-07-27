@@ -207,19 +207,6 @@ export default function UserSearch() {
                         {user.headline || `@${user.username || 'user'}`}
                       </div>
                     </div>
-                    {user.readiness_score > 0 && (
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: user.readiness_score >= 70 ? '#059669' : '#D97706',
-                        background: user.readiness_score >= 70 ? '#ECFDF5' : '#FFFBEB',
-                        padding: '3px 8px',
-                        borderRadius: '20px',
-                        flexShrink: 0,
-                      }}>
-                        {user.readiness_score}%
-                      </span>
-                    )}
                   </div>
                 )
               })}

@@ -11,45 +11,10 @@ const STEPS = [
   { id: 'extract_text', label: 'Extracting text from PDF' },
   { id: 'ai_analyze', label: 'AI analyzing CV and experiences' },
   { id: 'sync_skills', label: 'Extracting and categorizing skills' },
-  { id: 'calc_score', label: 'Calculating readiness score' },
   { id: 'completed', label: 'Updating profile' }
 ]
 
-function CircularProgress({ score, size = 100, strokeWidth = 8, color }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = radius * 2 * Math.PI
-  const offset = circumference - (score / 100) * circumference
-
-  return (
-    <div style={{ position: 'relative', width: size, height: size, display: 'inline-flex', alignItems: 'center', justify: 'center' }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke={theme.border.light}
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
-        />
-      </svg>
-      <div style={{ position: 'absolute', fontSize: '20px', fontWeight: '800', color: theme.text.primary }}>
-        {score}%
-      </div>
-    </div>
-  )
-}
+const activeProcessingUploads = new Set()
 
 export default function CvProcessor({ uploadId }) {
   const router = useRouter()
@@ -62,9 +27,8 @@ export default function CvProcessor({ uploadId }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [duration, setDuration] = useState('0.0')
   const [extractedData, setExtractedData] = useState(null)
-  const [profileData, setProfileData] = useState(null)
 
-  // Start logic
+  // Start logic with strict idempotency guard
   useEffect(() => {
     if (!uploadId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -73,10 +37,12 @@ export default function CvProcessor({ uploadId }) {
       return
     }
 
-    if (hasStarted.current) return
+    if (hasStarted.current || activeProcessingUploads.has(uploadId)) return
     hasStarted.current = true
+    activeProcessingUploads.add(uploadId)
 
     processCv()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadId])
 
   // Polling logic during processing
@@ -103,6 +69,7 @@ export default function CvProcessor({ uploadId }) {
     }, 1000)
 
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, uploadId])
 
   async function processCv() {
@@ -116,23 +83,6 @@ export default function CvProcessor({ uploadId }) {
       if (response.ok) {
         const result = await response.json()
         setExtractedData(result.data)
-
-        // Fetch recalculated profile score details
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('readiness_score, category_scores')
-            .eq('id', user.id)
-            .single()
-
-          if (profile) {
-            setProfileData({
-              score: profile.readiness_score || 0,
-              categoryScores: profile.category_scores || {}
-            })
-          }
-        }
 
         setDuration(((Date.now() - startTime.current) / 1000).toFixed(1))
         setStatus('Completed')
@@ -155,6 +105,8 @@ export default function CvProcessor({ uploadId }) {
   }
 
   const handleRetry = async () => {
+    activeProcessingUploads.delete(uploadId)
+    hasStarted.current = false
     setStatus('Processing')
     setCurrentStep('Extracting text')
     setErrorMessage('')
@@ -196,8 +148,10 @@ export default function CvProcessor({ uploadId }) {
       extract_text: 'Extracting text',
       ai_analyze: 'AI analyzing CV',
       sync_skills: 'Syncing skills',
-      calc_score: 'Calculating readiness score',
-      completed: 'Completed'
+      completed: 'Updating profile'
+    }
+    if (stepId === 'completed' && (currentStep === 'Calculating readiness score' || currentStep === 'Updating profile' || currentStep === 'Completed')) {
+      return currentStep
     }
     return map[stepId] || ''
   }
@@ -246,7 +200,7 @@ export default function CvProcessor({ uploadId }) {
             CV Processed Successfully!
           </h1>
           <p style={{ fontSize: '14px', color: theme.text.secondary }}>
-            Career Brain has completed the processing and scoring pipeline.
+            Career Brain has completed the processing and extraction pipeline.
           </p>
         </div>
 
@@ -286,30 +240,6 @@ export default function CvProcessor({ uploadId }) {
             </span>
           </div>
         </div>
-
-        {/* Readiness Score circular preview */}
-        {profileData && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            background: theme.bg.indigoSoft,
-            border: `1px solid ${theme.border.indigo}`,
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '28px',
-          }}>
-            <CircularProgress score={profileData.score} color={getScoreColor(profileData.score)} />
-            <div>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: theme.text.indigo }}>
-                Profile Readiness Score
-              </span>
-              <p style={{ fontSize: '13px', color: theme.text.secondary, marginTop: '2px', lineHeight: 1.4 }}>
-                Your CV skills are well-balanced! Review extracted details and suggested actions in your profile card.
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Grouped Skills preview */}
         {Object.keys(groupedSkills).length > 0 && (

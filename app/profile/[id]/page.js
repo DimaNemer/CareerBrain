@@ -105,12 +105,7 @@ const { data: posts } = await supabase
       .map(mp => ({ ...mp.projects, role: mp.role_in_project })) || []),
   ]
 
-  const skillsByCategory = skills.reduce((acc, us) => {
-    const cat = us.skills?.category || 'Other'
-    if (!acc[cat]) acc[cat] = []
-    acc[cat].push(us)
-    return acc
-  }, {})
+
 
   const initials = profile.full_name
     ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -622,51 +617,38 @@ const { data: posts } = await supabase
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {Object.entries(skillsByCategory).map(([category, catSkills]) => (
-                <div key={category}>
-                  <div style={{
-                    fontSize: '11px', fontWeight: 700,
-                    color: '#9CA3AF', textTransform: 'uppercase',
-                    letterSpacing: '0.8px', marginBottom: '10px',
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {skills.map((us, i) => {
+                const isVerified = us.source === 'Project'
+                return (
+                  <div key={us.id || i} style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px',
+                    background: isVerified ? '#ECFDF5' : '#EEF2FF',
+                    border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
+                    borderRadius: '10px',
                   }}>
-                    {category}
+                    {isVerified && (
+                      <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
+                    )}
+                    <span style={{
+                      fontSize: '13px', fontWeight: 600,
+                      color: isVerified ? '#065F46' : '#3730A3',
+                    }}>
+                      {us.skills?.name}
+                    </span>
+                    <span style={{
+                      fontSize: '10px',
+                      color: isVerified ? '#10B981' : '#818CF8',
+                      fontWeight: 500,
+                    }}>
+                      {isVerified
+                        ? 'Verified'
+                        : ['', 'Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'][us.proficiency_level] || ''}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {catSkills.map((us, i) => {
-                      const isVerified = us.source === 'Project'
-                      return (
-                        <div key={i} style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          padding: '6px 14px',
-                          background: isVerified ? '#ECFDF5' : '#EEF2FF',
-                          border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
-                          borderRadius: '10px',
-                        }}>
-                          {isVerified && (
-                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
-                          )}
-                          <span style={{
-                            fontSize: '13px', fontWeight: 600,
-                            color: isVerified ? '#065F46' : '#3730A3',
-                          }}>
-                            {us.skills?.name}
-                          </span>
-                          <span style={{
-                            fontSize: '10px',
-                            color: isVerified ? '#10B981' : '#818CF8',
-                            fontWeight: 500,
-                          }}>
-                            {isVerified
-                              ? 'Verified'
-                              : ['', 'Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'][us.proficiency_level] || ''}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
