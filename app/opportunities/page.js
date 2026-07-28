@@ -80,19 +80,32 @@ function readFiltersFromURL() {
 
 export default function OpportunitiesPage() {
   const router = useRouter()
-
+  const [initialFilters] = useState(readFiltersFromURL)
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState(null)
-  const [locationInput, setLocationInput] = useState('')
+const [locationInput, setLocationInput] = useState(
+  initialFilters.location || ''
+)
+
   const [debouncedLocation, setDebouncedLocation] = useState('')
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedType, setSelectedType] = useState('All')
-  const [keywordInput, setKeywordInput] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
-  const [showSavedOnly, setShowSavedOnly] = useState(false)
+ const [selectedType, setSelectedType] = useState(
+  initialFilters.type || 'All'
+)
+const [keywordInput, setKeywordInput] = useState(
+  initialFilters.keyword || ''
+)
+ const [activeTab, setActiveTab] = useState(
+  initialFilters.tab || 'all'
+)
+
+const [showSavedOnly, setShowSavedOnly] = useState(
+  initialFilters.saved || false
+)
+
   const [savedJobIds, setSavedJobIds] = useState(new Set())
   const [appliedJobIds, setAppliedJobIds] = useState(new Set())
   const [recsTopPicks, setRecsTopPicks] = useState([])
@@ -101,7 +114,9 @@ export default function OpportunitiesPage() {
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 })
   const [offset, setOffset] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
-  const [sortBy, setSortBy] = useState('newest')
+const [sortBy, setSortBy] = useState(
+  initialFilters.sort || 'newest'
+)
   const [showSortMenu, setShowSortMenu] = useState(false)
 
   const LIMIT = 50
@@ -109,15 +124,15 @@ export default function OpportunitiesPage() {
   const tabRefs = useRef({})
   const sortRef = useRef(null)
 
-  useEffect(() => {
-    const f = readFiltersFromURL()
-    if (f.location) setLocationInput(f.location)
-    if (f.type) setSelectedType(f.type)
-    if (f.keyword) setKeywordInput(f.keyword)
-    if (f.tab) setActiveTab(f.tab)
-    if (f.saved) setShowSavedOnly(true)
-    if (f.sort) setSortBy(f.sort)
-  }, [])
+  // useEffect(() => {
+  //   const f = readFiltersFromURL()
+  //   if (f.location) setLocationInput(f.location)
+  //   if (f.type) setSelectedType(f.type)
+  //   if (f.keyword) setKeywordInput(f.keyword)
+  //   if (f.tab) setActiveTab(f.tab)
+  //   if (f.saved) setShowSavedOnly(true)
+  //   if (f.sort) setSortBy(f.sort)
+  // }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedLocation(locationInput), 200)
@@ -154,20 +169,63 @@ export default function OpportunitiesPage() {
     return Array.from(map.values())
   }, [debouncedLocation, selectedType, keywordInput, opportunities, showSavedOnly, activeTab, savedJobIds])
 
-  const sortedJobs = useMemo(() => {
-    const list = [...filteredJobs]
+ const sortedJobs = useMemo(() => {
+  const list = [...filteredJobs]
+
+  function compareJobs(a, b) {
     switch (sortBy) {
-      case 'newest': return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-      case 'oldest': return list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
-      case 'company': return list.sort((a, b) => (a.company || '').localeCompare(b.company || ''))
-      case 'score': return list.sort((a, b) => {
-        const sa = a.match_results?.[0]?.match_score || 0
-        const sb = b.match_results?.[0]?.match_score || 0
-        return sb - sa
-      })
-      default: return list
+      case 'newest':
+        return (
+          new Date(b.created_at || 0) -
+          new Date(a.created_at || 0)
+        )
+
+      case 'oldest':
+        return (
+          new Date(a.created_at || 0) -
+          new Date(b.created_at || 0)
+        )
+
+      case 'company':
+        return (a.company || '').localeCompare(
+          b.company || ''
+        )
+
+      case 'score': {
+        const scoreA =
+          a.match_results?.[0]?.match_score || 0
+
+        const scoreB =
+          b.match_results?.[0]?.match_score || 0
+
+        return scoreB - scoreA
+      }
+
+      default:
+        return 0
     }
-  }, [filteredJobs, sortBy])
+  }
+
+  return list.sort((a, b) => {
+    const aIsEmployerJob =
+      a.is_employer_job === true
+
+    const bIsEmployerJob =
+      b.is_employer_job === true
+
+    // Employer-created jobs always remain above external API jobs.
+    if (aIsEmployerJob && !bIsEmployerJob) {
+      return -1
+    }
+
+    if (!aIsEmployerJob && bIsEmployerJob) {
+      return 1
+    }
+
+    // Sort jobs normally inside their own group.
+    return compareJobs(a, b)
+  })
+}, [filteredJobs, sortBy])
 
   const updateIndicator = useCallback((tabId) => {
     const el = tabRefs.current[tabId]

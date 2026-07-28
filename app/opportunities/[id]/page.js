@@ -40,11 +40,11 @@ export default function OpportunityDetailPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/opportunities/${params.id}`)
+       const res = await fetch(`/api/jobs/${params.id}`)
         if (res.status === 401) { router.push('/login'); return }
         if (!res.ok) throw new Error('Opportunity not found')
         const data = await res.json()
-        setOpportunity(data.opportunity)
+        setOpportunity(data.job)
       } catch (err) { setError(err.message) }
       finally { setLoading(false) }
     }
@@ -134,6 +134,28 @@ export default function OpportunityDetailPage() {
 
   const safeApplyUrl = getSafeUrl(opportunity.application_url)
   const daysAgoText = getDaysAgo(opportunity.posted_at || opportunity.created_at)
+  
+const salaryText =
+  opportunity.salary_min != null || opportunity.salary_max != null
+    ? [
+        opportunity.salary_min != null
+          ? Number(opportunity.salary_min).toLocaleString('en-US')
+          : null,
+        opportunity.salary_max != null
+          ? Number(opportunity.salary_max).toLocaleString('en-US')
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' – ')
+    : null
+
+const requirementsList =
+  typeof opportunity.requirements === 'string'
+    ? opportunity.requirements
+        .split(/\r?\n|•/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : []
   const opportunitySkills = Array.isArray(opportunity.opportunity_skills) ? opportunity.opportunity_skills : []
   const matchData = opportunity.match_results?.[0] || null
   const score = matchData ? Math.round(matchData.match_score * 100) : 0
@@ -200,6 +222,88 @@ export default function OpportunityDetailPage() {
                 <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{opportunity.description}</p>
               </div>
             )}
+            {opportunity.is_employer_job && (
+  <div className="mb-8">
+    <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+      Job Details
+    </h2>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {opportunity.opportunity_type && (
+        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Employment Type
+          </p>
+
+          <p className="text-sm font-semibold text-slate-700 capitalize">
+            {opportunity.opportunity_type}
+          </p>
+        </div>
+      )}
+
+      {opportunity.experience_level && (
+        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Experience Level
+          </p>
+
+          <p className="text-sm font-semibold text-slate-700 capitalize">
+            {opportunity.experience_level}
+          </p>
+        </div>
+      )}
+
+      {opportunity.location && (
+        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Location
+          </p>
+
+          <p className="text-sm font-semibold text-slate-700">
+            {opportunity.location}
+          </p>
+        </div>
+      )}
+
+      {salaryText && (
+        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Salary Range
+          </p>
+
+          <p className="text-sm font-semibold text-slate-700">
+            {salaryText}
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+{opportunity.requirements && (
+  <div className="mb-8">
+    <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+      Requirements
+    </h2>
+
+    {requirementsList.length > 1 ? (
+      <ul className="space-y-3">
+        {requirementsList.map((requirement, index) => (
+          <li
+            key={`${requirement}-${index}`}
+            className="flex items-start gap-3 text-sm text-slate-600 leading-relaxed"
+          >
+            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+            <span>{requirement}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+        {opportunity.requirements}
+      </p>
+    )}
+  </div>
+)}
 
             {opportunitySkills.length > 0 && (
               <div className="mb-6">
@@ -244,23 +348,46 @@ export default function OpportunityDetailPage() {
                 {opportunity.opportunity_type && (
                   <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">{opportunity.opportunity_type}</span>
                 )}
+       
               </div>
+   
               <div className="flex gap-3">
-                {safeApplyUrl && (
-                  <button onClick={(e) => handleApply(e, safeApplyUrl)}
-                    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer ${
-                      applied
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100'
-                        : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white'
-                    }`}
-                    aria-label={applied ? 'Applied to this position' : 'Apply to this position'}>
-                    {applied ? (
-                      <><CheckCircle2 className="w-4 h-4" /><span>Applied</span></>
-                    ) : (
-                      <><span>Apply Now</span><ExternalLink className="w-4 h-4" /></>
-                    )}
-                  </button>
-                )}
+                {opportunity.is_employer_job ? (
+  <button
+    onClick={() => router.push(`/opportunities/${params.id}/apply`)}
+    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white"
+    aria-label="Apply to this position"
+  >
+    <span>Apply Now</span>
+    <ArrowRight className="w-4 h-4" />
+  </button>
+) : safeApplyUrl ? (
+  <button
+    onClick={(e) => handleApply(e, safeApplyUrl)}
+    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer ${
+      applied
+        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100'
+        : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white'
+    }`}
+    aria-label={
+      applied
+        ? 'Applied to this position'
+        : 'Apply to this position'
+    }
+  >
+    {applied ? (
+      <>
+        <CheckCircle2 className="w-4 h-4" />
+        <span>Applied</span>
+      </>
+    ) : (
+      <>
+        <span>Apply Now</span>
+        <ExternalLink className="w-4 h-4" />
+      </>
+    )}
+  </button>
+) : null}
               </div>
             </div>
           </div>
