@@ -126,6 +126,7 @@ import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
 import NavLink from '@/components/NavLink'
 import NotificationBellWrapper from '@/components/notifications/NotificationBellWrapper'
+import UserSearch from '@/components/UserSearch'
 import { theme } from '@/constants/colors'
 
 export const metadata = {
@@ -237,23 +238,9 @@ export default async function RootLayout({ children }) {
                 Profile
               </NavLink>
 
-              {profile?.readiness_score > 0 && (
-                <div
-                  style={{
-                    marginLeft: '8px',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    background: theme.bg.emeraldSoft,
-                    color: theme.text.emerald,
-                    fontSize: '13px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {profile.readiness_score}% match
-                </div>
-              )}
 
-              <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserSearch />
                 <NotificationBellWrapper />
                 <LogoutButton />
               </div>

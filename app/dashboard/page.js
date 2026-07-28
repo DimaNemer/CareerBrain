@@ -26,7 +26,6 @@ export default async function DashboardPage() {
     .single()
 
   const firstName = profile?.full_name?.split(' ')[0] || 'there'
-  const score = profile?.readiness_score || 0
 
   // 🎯 استخراج اسم أول مهارة يمتلكها المستخدم ديناميكياً لتمريرها للمكوّن
   // إذا لم يكن يملك أي مهارات بعد، نمرر "React" كقيمة افتراضية (Fallback)
@@ -59,48 +58,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Readiness score — auth owned */}
-      {score > 0 && (
-        <div style={{
-          background: theme.bg.card,
-          border: `1px solid ${theme.border.light}`,
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '32px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '16px',
-        }}>
-          <div style={{
-            fontSize: '36px',
-            fontWeight: 700,
-            color: score >= 70
-              ? theme.score.high
-              : score >= 40
-              ? theme.score.medium
-              : theme.score.low,
-            letterSpacing: '-1px',
-          }}>
-            {score}%
-          </div>
-          <div>
-            <div style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.text.primary,
-            }}>
-              Readiness score
-            </div>
-            <div style={{
-              fontSize: '13px',
-              color: theme.text.secondary,
-              marginTop: '2px',
-            }}>
-              Based on your skills and projects
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 2️⃣ قسم المصادر التعليمية الديناميكي بالكامل */}
       <div style={{ marginBottom: '40px' }}>

@@ -58,13 +58,17 @@ export async function POST(request) {
       .eq('id', upload.id);
 
     // Download the PDF from Supabase Storage
-    const storagePath = upload.file_url.replace(`${CV_STORAGE_BUCKET}/`, '');
+    const storagePath = upload.file_url.includes(`${CV_STORAGE_BUCKET}/`)
+      ? upload.file_url.split(`${CV_STORAGE_BUCKET}/`).pop()
+      : upload.file_url;
+
     const { data: fileData, error: downloadError } = await supabase.storage
       .from(CV_STORAGE_BUCKET)
       .download(storagePath);
 
     if (downloadError || !fileData) {
-      throw new Error('Failed to download the CV file.');
+      console.error('Storage download error:', downloadError);
+      throw new Error(`Failed to download the CV file from storage: ${downloadError?.message || 'File missing'}`);
     }
 
     // Convert Blob to Buffer
@@ -74,7 +78,7 @@ export async function POST(request) {
     // Extract text from PDF
     const text = await extractTextFromPdf(buffer);
     if (!text || text.trim().length === 0) {
-      throw new Error('Text extraction from CV returned empty content.');
+      throw new Error('Could not extract text from this PDF. Please make sure the uploaded file is a PDF with selectable text (not an image scan).');
     }
 
     // Update step: AI analyzing CV
@@ -130,10 +134,10 @@ export async function POST(request) {
     const resolvedGlobalSkills = await syncGlobalSkills(combinedSkills);
     await syncUserSkills(user.id, resolvedGlobalSkills, combinedSkills, 'CV');
 
-    // Update step: Calculating readiness score
+    // Update step: Updating profile
     await supabase
       .from('cv_uploads')
-      .update({ processing_step: 'Calculating readiness score' })
+      .update({ processing_step: 'Updating profile' })
       .eq('id', upload.id);
 
     // Recalculate and update the user's readiness score in public.profiles table

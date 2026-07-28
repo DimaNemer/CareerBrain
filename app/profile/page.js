@@ -8,6 +8,7 @@ import AvatarUpload from '@/components/profile/AvatarUpload'
 import CopyButton from '@/components/profile/CopyButton'
 import ProjectPostForm from '@/components/profile/ProjectPostForm'
 import AddSkillButton from '@/components/profile/AddSkillButton'
+import RemoveSkillButton from '@/components/profile/RemoveSkillButton'
 
 export default async function PrivateProfilePage() {
   const supabase = await createClient()
@@ -116,8 +117,6 @@ export default async function PrivateProfilePage() {
       ascending: false,
     })
 
-  const score = profile?.readiness_score || 0
-  const categoryScores = profile?.category_scores || {}
   const skills = profile?.user_skills || []
 
   const verifiedSkills = skills.filter(
@@ -147,88 +146,6 @@ export default async function PrivateProfilePage() {
   function getProficiencyLabel(level) {
     const labels = { 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }
     return labels[level] || 'Beginner'
-  }
-
-  const categoryLabels = {
-    technical: 'Technical Skills',
-    communication: 'Communication Skills',
-    softSkills: 'Soft Skills',
-    language: 'Language Skills',
-    leadership: 'Leadership & Management',
-    tools: 'Tools & Software',
-    domainKnowledge: 'Domain Knowledge'
-  }
-
-  const skillsByCategory = skills.reduce((acc, us) => {
-    const raw = us.skills?.category || 'Other relevant professional skills'
-    if (!acc[raw]) acc[raw] = []
-    acc[raw].push(us)
-    return acc
-  }, {})
-
-  const normalizedCategoryMap = {}
-  for (const cat of Object.keys(skillsByCategory)) {
-    const canonical = Object.values(categoryLabels).find(
-      v => v.toLowerCase() === cat.toLowerCase()
-    )
-    if (canonical && canonical !== cat) {
-      normalizedCategoryMap[cat] = canonical
-    }
-  }
-
-  if (Object.keys(normalizedCategoryMap).length > 0) {
-    for (const [oldKey, newKey] of Object.entries(normalizedCategoryMap)) {
-      if (!skillsByCategory[newKey]) skillsByCategory[newKey] = []
-      skillsByCategory[newKey].push(...skillsByCategory[oldKey])
-      delete skillsByCategory[oldKey]
-    }
-  }
-
-  const recommendations = []
-  if (skills.length > 0) {
-    if ((categoryScores.technical || 0) < 60) {
-      recommendations.push({
-        category: 'Technical Skills',
-        text: 'Include technical projects demonstrating practical experience or add more technical programming languages/frameworks.'
-      })
-    }
-    if ((categoryScores.communication || 0) < 60) {
-      recommendations.push({
-        category: 'Communication Skills',
-        text: 'Add more evidence of communication skills, such as presentation experience, public speaking, or technical writing.'
-      })
-    }
-    if ((categoryScores.softSkills || 0) < 60) {
-      recommendations.push({
-        category: 'Soft Skills',
-        text: 'Highlight key professional soft skills like teamwork, problem-solving, or time management.'
-      })
-    }
-    if ((categoryScores.language || 0) < 60) {
-      recommendations.push({
-        category: 'Language Skills',
-        text: 'Add your language proficiencies (e.g. English, French) to complete your communication profile.'
-      })
-    }
-    if ((categoryScores.leadership || 0) < 60) {
-      recommendations.push({
-        category: 'Leadership & Management',
-        text: 'Include leadership or project management experience, such as mentoring, project lead roles, or scrum management.'
-      })
-    }
-    if ((categoryScores.tools || 0) < 60) {
-      recommendations.push({
-        category: 'Tools & Software',
-        text: 'Mention modern developer tools and software you use day-to-day (e.g. Git, Docker, Figma, Supabase).'
-      })
-    }
-    if ((categoryScores.domainKnowledge || 0) < 60) {
-      recommendations.push({
-        category: 'Domain Knowledge',
-        text: 'Include industry-specific domain knowledge relevant to your target positions (e.g. finance, healthcare, AI).'
-      })
-    }
-
   }
 
 
@@ -346,38 +263,6 @@ export default async function PrivateProfilePage() {
                 @{profile?.username || 'username'}
               </p>
             </div>
-
-            <div
-              style={{
-                minWidth: '160px',
-                textAlign: 'center',
-                padding: '18px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '16px',
-              }}
-            >
-              <div
-                style={{
-                  color: '#10B981',
-                  fontSize: '42px',
-                  fontWeight: 800,
-                }}
-              >
-                {profile?.readiness_score || 0}%
-              </div>
-
-              <div
-                style={{
-                  color: 'rgba(255,255,255,0.45)',
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Readiness score
-              </div>
-            </div>
           </div>
 
           <div
@@ -471,98 +356,7 @@ export default async function PrivateProfilePage() {
           </Section>
         )}
 
-        {skills.length > 0 && Object.keys(categoryScores).length > 0 && (
-          <Section title="Readiness Score Breakdown">
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '16px',
-            }}>
-              {Object.entries(categoryLabels).map(([key, label]) => {
-                const catScore = categoryScores[key] || 0
-                return (
-                  <div key={key} style={{
-                    background: '#F9FAFB',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '11px',
-                    padding: '12px 14px',
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '6px',
-                    }}>
-                      <span style={{
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: '#4B5563',
-                      }}>
-                        {label}
-                      </span>
-                      <span style={{
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: catScore >= 70 ? '#059669' : catScore >= 40 ? '#D97706' : '#DC2626',
-                      }}>
-                        {catScore}%
-                      </span>
-                    </div>
-                    <div style={{
-                      height: '5px',
-                      background: '#E5E7EB',
-                      borderRadius: '3px',
-                      overflow: 'hidden',
-                    }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${catScore}%`,
-                        background: catScore >= 70 ? '#10B981' : catScore >= 40 ? '#F59E0B' : '#EF4444',
-                        borderRadius: '3px',
-                      }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </Section>
-        )}
 
-        {recommendations.length > 0 && (
-          <Section title="Recommended Actions for Improvement" count={recommendations.length}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {recommendations.map((rec, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '10px',
-                  padding: '12px 14px',
-                  background: '#FFFBEB',
-                  border: '1px solid #FDE68A',
-                  borderRadius: '11px',
-                }}>
-                  <span style={{ fontSize: '16px', marginTop: '2px' }}>💡</span>
-                  <div>
-                    <span style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: '#B45309',
-                      display: 'block',
-                      marginBottom: '2px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.4px',
-                    }}>
-                      {rec.category}
-                    </span>
-                    <span style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.5 }}>
-                      {rec.text}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
 
         <Section
           title="Create post"
@@ -742,57 +536,51 @@ export default async function PrivateProfilePage() {
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {Object.entries(skillsByCategory).map(([category, catSkills]) => (
-                <div key={category}>
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: '#9CA3AF',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.8px',
-                    marginBottom: '10px',
-                  }}>
-                    {category}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {skills.map((us, i) => {
+                const isVerified = us.source === 'Project'
+                return (
+                  <div
+                    key={us.id || i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      background: isVerified ? '#ECFDF5' : '#EEF2FF',
+                      border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
+                      borderRadius: '10px',
+                    }}
+                  >
+                    {isVerified && (
+                      <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: isVerified ? '#065F46' : '#3730A3',
+                      }}
+                    >
+                      {us.skills?.name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: isVerified ? '#10B981' : '#818CF8',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {isVerified
+                        ? 'Verified'
+                        : getProficiencyLabel(us.proficiency_level)}
+                    </span>
+                    {!isVerified && (
+                      <RemoveSkillButton skillId={us.id} skillName={us.skills?.name} />
+                    )}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {catSkills.map((us, i) => {
-                      const isVerified = us.source === 'Project'
-                      return (
-                        <div key={i} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 14px',
-                          background: isVerified ? '#ECFDF5' : '#EEF2FF',
-                          border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
-                          borderRadius: '10px',
-                        }}>
-                          {isVerified && (
-                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
-                          )}
-                          <span style={{
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: isVerified ? '#065F46' : '#3730A3',
-                          }}>
-                            {us.skills?.name}
-                          </span>
-                          <span style={{
-                            fontSize: '10px',
-                            color: isVerified ? '#10B981' : '#818CF8',
-                            fontWeight: 500,
-                          }}>
-                            {isVerified
-                              ? 'Verified'
-                              : getProficiencyLabel(us.proficiency_level)}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Section>
