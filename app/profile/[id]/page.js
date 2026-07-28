@@ -19,7 +19,7 @@ const backUrl =
   typeof resolvedSearchParams?.from === 'string'
     ? resolvedSearchParams.from
     : '/projects'
-  const { data: profile, error } = await supabase
+
   const { data: profile, error } = await publicSupabase
     .from('profiles')
     .select(`
