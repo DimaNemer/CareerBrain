@@ -6,11 +6,20 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { sendProfileViewNotification } from '@/lib/profile-notifications'
 
-export default async function PublicProfilePage({ params }) {
+export default async function PublicProfilePage({
+  params,
+  searchParams,
+}) {
   const supabase = await createClient()
   const publicSupabase = createServiceClient()
   const { id } = await params
+const resolvedSearchParams = await searchParams
 
+const backUrl =
+  typeof resolvedSearchParams?.from === 'string'
+    ? resolvedSearchParams.from
+    : '/projects'
+  const { data: profile, error } = await supabase
   const { data: profile, error } = await publicSupabase
     .from('profiles')
     .select(`
@@ -120,8 +129,8 @@ const { data: posts } = await supabase
     padding: '24px 24px 0',
   }}
 >
-  <Link
-    href="/projects"
+<Link
+  href={backUrl}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
@@ -134,7 +143,7 @@ const { data: posts } = await supabase
     }}
   >
     <ArrowLeft size={18} />
-    Back to Projects
+    Back
   </Link>
 </div>
 
