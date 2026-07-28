@@ -96,7 +96,7 @@ export default function AddRoleForm({ projectId, skills }) {
 
         <div>
           <label className="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            Skill
+            Skill/s
           </label>
           <input
             type="text"

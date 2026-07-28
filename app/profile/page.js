@@ -7,6 +7,8 @@ import Link from 'next/link'
 import AvatarUpload from '@/components/profile/AvatarUpload'
 import CopyButton from '@/components/profile/CopyButton'
 import ProjectPostForm from '@/components/profile/ProjectPostForm'
+import AddSkillButton from '@/components/profile/AddSkillButton'
+import RemoveSkillButton from '@/components/profile/RemoveSkillButton'
 
 export default async function PrivateProfilePage() {
   const supabase = await createClient()
@@ -26,6 +28,8 @@ export default async function PrivateProfilePage() {
       user_skills (
         id,
         proficiency_level,
+        proficiency_score,
+        evidence,
         source,
         skills (
           id,
@@ -39,24 +43,25 @@ export default async function PrivateProfilePage() {
 
   if (profileError) {
     console.error('Private profile error:', profileError)
+
   }
 
-const { data: certificates = [] } = await supabase
-  .from('user_certificates')
-  .select(`
-    id,
-    name,
-    issuing_organization,
-    issue_date,
-    expiration_date,
-    credential_id,
-    credential_url
-  `)
-  .eq('user_id', user.id)
-  .order('issue_date', {
-    ascending: false,
-    nullsFirst: false,
-  })
+  const { data: certificates = [] } = await supabase
+    .from('user_certificates')
+    .select(`
+      id,
+      name,
+      issuing_organization,
+      issue_date,
+      expiration_date,
+      credential_id,
+      credential_url
+    `)
+    .eq('user_id', user.id)
+    .order('issue_date', {
+      ascending: false,
+      nullsFirst: false,
+    })
 
   const { data: ownedProjects = [] } = await supabase
     .from('projects')
@@ -92,21 +97,21 @@ const { data: certificates = [] } = await supabase
       ascending: false,
     })
 
-const { data: posts = [] } = await supabase
-  .from('project_posts')
-  .select(`
-    id,
-    title,
-    content,
-    skills_highlighted,
-    image_url,
-    image_path,
-    created_at,
-    projects (
+  const { data: posts = [] } = await supabase
+    .from('project_posts')
+    .select(`
       id,
-      title
-    )
-  `)
+      title,
+      content,
+      skills_highlighted,
+      image_url,
+      image_path,
+      created_at,
+      projects (
+        id,
+        title
+      )
+    `)
     .eq('user_id', user.id)
     .order('created_at', {
       ascending: false,
@@ -137,6 +142,13 @@ const { data: posts = [] } = await supabase
       .join('')
       .toUpperCase()
       .slice(0, 2) || '?'
+
+  function getProficiencyLabel(level) {
+    const labels = { 1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert' }
+    return labels[level] || 'Beginner'
+  }
+
+
 
   return (
     <div
@@ -251,38 +263,6 @@ const { data: posts = [] } = await supabase
                 @{profile?.username || 'username'}
               </p>
             </div>
-
-            <div
-              style={{
-                minWidth: '160px',
-                textAlign: 'center',
-                padding: '18px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '16px',
-              }}
-            >
-              <div
-                style={{
-                  color: '#10B981',
-                  fontSize: '42px',
-                  fontWeight: 800,
-                }}
-              >
-                {profile?.readiness_score || 0}%
-              </div>
-
-              <div
-                style={{
-                  color: 'rgba(255,255,255,0.45)',
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Readiness score
-              </div>
-            </div>
           </div>
 
           <div
@@ -375,6 +355,8 @@ const { data: posts = [] } = await supabase
             </p>
           </Section>
         )}
+
+
 
         <Section
           title="Create post"
@@ -513,42 +495,92 @@ const { data: posts = [] } = await supabase
         <Section
           title="Skills"
           count={skills.length}
+          action={
+            <div style={{ display: 'flex', gap: '14px' }}>
+              <Link
+                href="/upload-cv"
+                style={{
+                  color: '#5B4FE8',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                {skills.length > 0 ? '↻ Re-upload CV' : '📄 Upload CV'}
+              </Link>
+              <AddSkillButton />
+            </div>
+          }
         >
           {skills.length === 0 ? (
-            <EmptyState
-              icon="⚡"
-              message="No skills have been added yet."
-            />
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <EmptyState
+                icon="⚡"
+                message="No skills have been added yet. Upload your CV to extract them automatically."
+              />
+              <Link
+                href="/upload-cv"
+                style={{
+                  display: 'inline-block',
+                  marginTop: '12px',
+                  padding: '8px 18px',
+                  background: '#5B4FE8',
+                  color: '#FFFFFF',
+                  borderRadius: '9px',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                Upload CV
+              </Link>
+            </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              {skills.map((skill, index) => (
-                <span
-                  key={skill.id || index}
-                  style={{
-                    padding: '6px 11px',
-                    borderRadius: '8px',
-                    background:
-                      skill.source === 'Project'
-                        ? '#ECFDF5'
-                        : '#EEF2FF',
-                    color:
-                      skill.source === 'Project'
-                        ? '#047857'
-                        : '#4338CA',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {skill.source === 'Project' ? '✓ ' : ''}
-                  {skill.skills?.name}
-                </span>
-              ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {skills.map((us, i) => {
+                const isVerified = us.source === 'Project'
+                return (
+                  <div
+                    key={us.id || i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      background: isVerified ? '#ECFDF5' : '#EEF2FF',
+                      border: `1.5px solid ${isVerified ? '#6EE7B7' : '#C7D2FE'}`,
+                      borderRadius: '10px',
+                    }}
+                  >
+                    {isVerified && (
+                      <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>✓</span>
+                    )}
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: isVerified ? '#065F46' : '#3730A3',
+                      }}
+                    >
+                      {us.skills?.name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: isVerified ? '#10B981' : '#818CF8',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {isVerified
+                        ? 'Verified'
+                        : getProficiencyLabel(us.proficiency_level)}
+                    </span>
+                    {!isVerified && (
+                      <RemoveSkillButton skillId={us.id} skillName={us.skills?.name} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </Section>

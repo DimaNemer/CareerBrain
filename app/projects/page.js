@@ -5,11 +5,13 @@ import ProjectBrowser from './project-browser'
 
 export default async function ProjectsPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: projects, error } = await supabase
     .from('projects')
     .select(`
       id,
+      owner_id,
       title,
       description,
       status,
@@ -115,7 +117,7 @@ export default async function ProjectsPage() {
             </Link>
           </div>
         ) : (
-          <ProjectBrowser projects={sortedProjects} />
+          <ProjectBrowser projects={sortedProjects} currentUserId={user?.id} />
         )}
       </div>
     </main>

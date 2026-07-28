@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  serverExternalPackages: [
+    '@xenova/transformers',
+    '@napi-rs/canvas',
+    'pdf-parse',
+    'pdfjs-dist',
+    'sharp',
+  ],
 };
 
 export default nextConfig;
