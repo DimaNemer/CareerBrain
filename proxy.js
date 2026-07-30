@@ -119,6 +119,8 @@ export async function proxy(request) {
     pathname.startsWith(route)
   )
 
+  const isHomeRoute = pathname === '/'
+
   const isEmployerRoute = pathname.startsWith('/employer')
 
   // User is not logged in and tries to open a protected page.
@@ -145,8 +147,8 @@ export async function proxy(request) {
 
     const role = profile?.role
 
-    // Logged-in users should not return to login or signup.
-    if (isAuthRoute) {
+    // A persisted session should take users straight back to their dashboard.
+    if (isHomeRoute || isAuthRoute) {
       const destination =
         role === 'employer'
           ? '/employer/dashboard'
