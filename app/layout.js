@@ -150,7 +150,8 @@ export default async function RootLayout({ children }) {
         id,
         full_name,
         username,
-        readiness_score
+        readiness_score,
+        role
       `)
       .eq('id', user.id)
       .single()
@@ -221,9 +222,11 @@ export default async function RootLayout({ children }) {
                 gap: '4px',
               }}
             >
-              <NavLink href="/upload-cv">
-                Upload CV
-              </NavLink>
+             {profile?.role !== 'employer' && (
+  <NavLink href="/upload-cv">
+    Upload CV
+  </NavLink>
+)}
 
               <NavLink href="/opportunities">
                 Jobs
@@ -234,9 +237,15 @@ export default async function RootLayout({ children }) {
               </NavLink>
 
               {/* Opens the private profile */}
-              <NavLink href="/profile">
-                Profile
-              </NavLink>
+            <NavLink
+  href={
+    profile?.role === 'employer'
+      ? '/employer/profile'
+      : '/profile'
+  }
+>
+  Profile
+</NavLink>
 
 
               <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
