@@ -20,8 +20,29 @@ export async function GET(request) {
 
     const { data: users, error } = await supabase
       .from('profiles')
-      .select('id, full_name, username, headline, avatar_url, readiness_score')
-      .or(`full_name.ilike.%${query}%,username.ilike.%${query}%,headline.ilike.%${query}%`)
+     .select(`
+  id,
+  full_name,
+  username,
+  role,
+  headline,
+  avatar_url,
+  company_name,
+  company_industry,
+  company_location,
+  company_logo_url,
+  employer_headline
+`)
+     .or(
+  [
+    `full_name.ilike.%${query}%`,
+    `username.ilike.%${query}%`,
+    `headline.ilike.%${query}%`,
+    `company_name.ilike.%${query}%`,
+    `company_industry.ilike.%${query}%`,
+    `employer_headline.ilike.%${query}%`,
+  ].join(',')
+)
       .or('profile_visibility.is.null,profile_visibility.eq.public')
       .neq('id', user.id)
       .limit(limit)

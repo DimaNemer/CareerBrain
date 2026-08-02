@@ -52,13 +52,19 @@ export default function UserSearch({ fullWidth = false }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const navigateTo = (userId) => {
-    setOpen(false)
-    setQuery('')
-    setResults([])
-    setSelected(-1)
-    router.push(`/profile/${userId}`)
+const navigateTo = (result) => {
+  setOpen(false)
+  setQuery('')
+  setResults([])
+  setSelected(-1)
+
+  if (result.role === 'employer') {
+    router.push(`/company/${result.id}`)
+    return
   }
+
+  router.push(`/profile/${result.id}`)
+}
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -68,8 +74,8 @@ export default function UserSearch({ fullWidth = false }) {
       e.preventDefault()
       setSelected(prev => Math.max(prev - 1, -1))
     } else if (e.key === 'Enter' && selected >= 0) {
-      e.preventDefault()
-      navigateTo(results[selected].id)
+  e.preventDefault()
+  navigateTo(results[selected])
     } else if (e.key === 'Escape') {
       setOpen(false)
       setSelected(-1)
@@ -105,16 +111,20 @@ export default function UserSearch({ fullWidth = false }) {
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setSelected(-1) }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search people..."
+       placeholder="Search people or companies..."
           style={{
             border: 'none',
             background: 'transparent',
             outline: 'none',
             fontSize: '13px',
             color: theme.text.primary,
+<<<<<<< HEAD
             width: fullWidth ? '100%' : '140px',
             flex: fullWidth ? '1' : undefined,
             minWidth: 0,
+=======
+            width: '190px',
+>>>>>>> 787505fce08ba35df6157ae19c322a0181cf80e2
             fontWeight: 500,
           }}
         />
@@ -161,59 +171,191 @@ export default function UserSearch({ fullWidth = false }) {
               Searching...
             </div>
           ) : results.length === 0 ? (
+<<<<<<< HEAD
             <div style={{ padding: '24px', textAlign: 'center' }}>
               <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔍</div>
               <div style={{ color: theme.text.tertiary, fontSize: '13px' }}>No users found for {`"${query}"`}</div>
             </div>
+=======
+        <div
+  style={{
+    color: theme.text.tertiary,
+    fontSize: '13px',
+  }}
+>
+  {`No people or companies found for "${query}"`}
+</div>
+>>>>>>> 787505fce08ba35df6157ae19c322a0181cf80e2
           ) : (
             <div style={{ padding: '6px' }}>
-              {results.map((user, i) => {
-                const initials = user.full_name?.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
-                return (
-                  <div
-                    key={user.id}
-                    onClick={() => navigateTo(user.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px 12px',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      background: i === selected ? theme.bg.hover : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={() => setSelected(i)}
-                    onMouseLeave={() => setSelected(-1)}
-                  >
-                    <div style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      background: user.avatar_url ? 'transparent' : `linear-gradient(135deg, ${theme.action.primary}, #818CF8)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt={user.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{initials}</span>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {user.full_name || 'Unknown'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: theme.text.tertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {user.headline || `@${user.username || 'user'}`}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+             {results.map((user, i) => {
+  const isEmployer =
+    user.role === 'employer'
+
+  const displayName = isEmployer
+    ? user.company_name ||
+      user.full_name ||
+      'Company'
+    : user.full_name || 'Unknown'
+
+  const displaySubtitle = isEmployer
+    ? user.employer_headline ||
+      user.company_industry ||
+      user.company_location ||
+      'Employer'
+    : user.headline ||
+      `@${user.username || 'user'}`
+
+  const displayImage = isEmployer
+    ? user.company_logo_url
+    : user.avatar_url
+
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?'
+
+  return (
+    <div
+      key={user.id}
+      onClick={() => navigateTo(user)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 12px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        background:
+          i === selected
+            ? theme.bg.hover
+            : 'transparent',
+        transition: 'background 0.1s',
+      }}
+      onMouseEnter={() => setSelected(i)}
+      onMouseLeave={() => setSelected(-1)}
+    >
+      <div
+        style={{
+          width: '38px',
+          height: '38px',
+          borderRadius: isEmployer
+            ? '10px'
+            : '50%',
+          overflow: 'hidden',
+          flexShrink: 0,
+          background: displayImage
+            ? 'transparent'
+            : `linear-gradient(135deg, ${theme.action.primary}, #818CF8)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {displayImage ? (
+          <img
+            src={displayImage}
+            alt={displayName}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 700,
+              color: '#fff',
+            }}
+          >
+            {initials}
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: theme.text.primary,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {displayName}
+          </div>
+
+          <span
+            style={{
+              flexShrink: 0,
+              padding: '2px 7px',
+              borderRadius: '999px',
+              background: isEmployer
+                ? '#F3E8FF'
+                : '#EEF2FF',
+              color: isEmployer
+                ? '#7C3AED'
+                : '#4338CA',
+              fontSize: '9px',
+              fontWeight: 700,
+            }}
+          >
+            {isEmployer
+              ? 'Company'
+              : 'Job seeker'}
+          </span>
+        </div>
+
+        <div
+          style={{
+            marginTop: '2px',
+            fontSize: '12px',
+            color: theme.text.tertiary,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displaySubtitle}
+        </div>
+
+        {isEmployer &&
+          user.full_name &&
+          user.company_name && (
+            <div
+              style={{
+                marginTop: '2px',
+                color: theme.text.tertiary,
+                fontSize: '10px',
+              }}
+            >
+              Represented by {user.full_name}
+            </div>
+          )}
+      </div>
+    </div>
+  )
+})}
             </div>
           )}
         </div>
