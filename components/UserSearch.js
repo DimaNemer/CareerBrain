@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { theme } from '@/constants/colors'
 
-export default function UserSearch() {
+export default function UserSearch({ fullWidth = false }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -80,7 +80,7 @@ export default function UserSearch() {
   const showDropdown = open && query.length >= 2
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative' }}>
+    <div ref={dropdownRef} style={{ position: 'relative', width: fullWidth ? '100%' : undefined }}>
       <div
         style={{
           display: 'flex',
@@ -112,7 +112,9 @@ export default function UserSearch() {
             outline: 'none',
             fontSize: '13px',
             color: theme.text.primary,
-            width: '140px',
+            width: fullWidth ? '100%' : '140px',
+            flex: fullWidth ? '1' : undefined,
+            minWidth: 0,
             fontWeight: 500,
           }}
         />
@@ -143,7 +145,9 @@ export default function UserSearch() {
             top: 'calc(100% + 8px)',
             left: 0,
             right: 0,
-            minWidth: '320px',
+            width: fullWidth ? '100%' : undefined,
+            minWidth: fullWidth ? 0 : '320px',
+            maxWidth: 'calc(100vw - 24px)',
             background: '#FFFFFF',
             border: `1px solid ${theme.border.light}`,
             borderRadius: '14px',
@@ -159,7 +163,7 @@ export default function UserSearch() {
           ) : results.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center' }}>
               <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔍</div>
-              <div style={{ color: theme.text.tertiary, fontSize: '13px' }}>No users found for "{query}"</div>
+              <div style={{ color: theme.text.tertiary, fontSize: '13px' }}>No users found for {`"${query}"`}</div>
             </div>
           ) : (
             <div style={{ padding: '6px' }}>

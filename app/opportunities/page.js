@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Toaster, toast } from 'sonner'
 import { Heart, MapPin, Clock, Search, AlertTriangle, ArrowRight, RefreshCw, X, Briefcase, Target, BookmarkCheck, Sparkles, TrendingUp, Zap, ChevronRight, ChevronDown, ArrowUpDown, CheckCircle2 } from 'lucide-react'
 import MissingSkillBadge from '@/components/MissingSkillBadge'
@@ -65,47 +65,22 @@ function Globe() {
   )
 }
 
-function readFiltersFromURL() {
-  if (typeof window === 'undefined') return {}
-  const p = new URLSearchParams(window.location.search)
-  return {
-    location: p.get('location') || '',
-    type: p.get('type') || 'All',
-    keyword: p.get('keyword') || '',
-    tab: p.get('tab') || 'all',
-    saved: p.get('saved') === 'true',
-    sort: p.get('sort') || 'newest',
-  }
-}
-
 export default function OpportunitiesPage() {
   const router = useRouter()
-  const [initialFilters] = useState(readFiltersFromURL)
+  const searchParams = useSearchParams()
+
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState(null)
-const [locationInput, setLocationInput] = useState(
-  initialFilters.location || ''
-)
-
+  const [locationInput, setLocationInput] = useState(() => searchParams.get('location') || '')
   const [debouncedLocation, setDebouncedLocation] = useState('')
   const [isOpen, setIsOpen] = useState(false)
- const [selectedType, setSelectedType] = useState(
-  initialFilters.type || 'All'
-)
-const [keywordInput, setKeywordInput] = useState(
-  initialFilters.keyword || ''
-)
- const [activeTab, setActiveTab] = useState(
-  initialFilters.tab || 'all'
-)
-
-const [showSavedOnly, setShowSavedOnly] = useState(
-  initialFilters.saved || false
-)
-
+  const [selectedType, setSelectedType] = useState(() => searchParams.get('type') || 'All')
+  const [keywordInput, setKeywordInput] = useState(() => searchParams.get('keyword') || '')
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'all')
+  const [showSavedOnly, setShowSavedOnly] = useState(() => searchParams.get('saved') === 'true')
   const [savedJobIds, setSavedJobIds] = useState(new Set())
   const [appliedJobIds, setAppliedJobIds] = useState(new Set())
   const [recsTopPicks, setRecsTopPicks] = useState([])
@@ -114,25 +89,13 @@ const [showSavedOnly, setShowSavedOnly] = useState(
   const [tabIndicator, setTabIndicator] = useState({ left: 0, width: 0 })
   const [offset, setOffset] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
-const [sortBy, setSortBy] = useState(
-  initialFilters.sort || 'newest'
-)
+  const [sortBy, setSortBy] = useState(() => searchParams.get('sort') || 'newest')
   const [showSortMenu, setShowSortMenu] = useState(false)
 
   const LIMIT = 50
   const dropdownRef = useRef(null)
   const tabRefs = useRef({})
   const sortRef = useRef(null)
-
-  // useEffect(() => {
-  //   const f = readFiltersFromURL()
-  //   if (f.location) setLocationInput(f.location)
-  //   if (f.type) setSelectedType(f.type)
-  //   if (f.keyword) setKeywordInput(f.keyword)
-  //   if (f.tab) setActiveTab(f.tab)
-  //   if (f.saved) setShowSavedOnly(true)
-  //   if (f.sort) setSortBy(f.sort)
-  // }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedLocation(locationInput), 200)
@@ -169,63 +132,20 @@ const [sortBy, setSortBy] = useState(
     return Array.from(map.values())
   }, [debouncedLocation, selectedType, keywordInput, opportunities, showSavedOnly, activeTab, savedJobIds])
 
- const sortedJobs = useMemo(() => {
-  const list = [...filteredJobs]
-
-  function compareJobs(a, b) {
+  const sortedJobs = useMemo(() => {
+    const list = [...filteredJobs]
     switch (sortBy) {
-      case 'newest':
-        return (
-          new Date(b.created_at || 0) -
-          new Date(a.created_at || 0)
-        )
-
-      case 'oldest':
-        return (
-          new Date(a.created_at || 0) -
-          new Date(b.created_at || 0)
-        )
-
-      case 'company':
-        return (a.company || '').localeCompare(
-          b.company || ''
-        )
-
-      case 'score': {
-        const scoreA =
-          a.match_results?.[0]?.match_score || 0
-
-        const scoreB =
-          b.match_results?.[0]?.match_score || 0
-
-        return scoreB - scoreA
-      }
-
-      default:
-        return 0
+      case 'newest': return list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      case 'oldest': return list.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+      case 'company': return list.sort((a, b) => (a.company || '').localeCompare(b.company || ''))
+      case 'score': return list.sort((a, b) => {
+        const sa = a.match_results?.[0]?.match_score || 0
+        const sb = b.match_results?.[0]?.match_score || 0
+        return sb - sa
+      })
+      default: return list
     }
-  }
-
-  return list.sort((a, b) => {
-    const aIsEmployerJob =
-      a.is_employer_job === true
-
-    const bIsEmployerJob =
-      b.is_employer_job === true
-
-    // Employer-created jobs always remain above external API jobs.
-    if (aIsEmployerJob && !bIsEmployerJob) {
-      return -1
-    }
-
-    if (!aIsEmployerJob && bIsEmployerJob) {
-      return 1
-    }
-
-    // Sort jobs normally inside their own group.
-    return compareJobs(a, b)
-  })
-}, [filteredJobs, sortBy])
+  }, [filteredJobs, sortBy])
 
   const updateIndicator = useCallback((tabId) => {
     const el = tabRefs.current[tabId]
@@ -344,7 +264,7 @@ const [sortBy, setSortBy] = useState(
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [router, sortBy])
 
-  useEffect(() => { const t = setTimeout(() => updateIndicator(activeTab), 100); return () => clearTimeout(t) }, [opportunities])
+  useEffect(() => { const t = setTimeout(() => updateIndicator(activeTab), 100); return () => clearTimeout(t) }, [opportunities, activeTab, updateIndicator])
 
   const toggleBookmark = async (jobId) => {
     const saved = savedJobIds.has(jobId)
@@ -838,3 +758,4 @@ const [sortBy, setSortBy] = useState(
     </>
   )
 }
+2

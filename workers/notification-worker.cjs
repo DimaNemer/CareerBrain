@@ -4,7 +4,12 @@ const fs = require('fs')
 const path = require('path')
 
 const envPath = path.join(__dirname, '..', '.env.local')
-const envContent = fs.readFileSync(envPath, 'utf8')
+let envContent = ''
+try {
+  envContent = fs.readFileSync(envPath, 'utf8')
+} catch {
+  // .env.local is optional — env vars may be provided by the environment directly.
+}
 function getEnv(key) {
   const match = envContent.match(new RegExp('^' + key + '=(.+)$', 'm'))
   return match ? match[1].trim() : process.env[key]
@@ -117,9 +122,9 @@ async function processUser(user) {
       // ── Dev guard ─────────────────────────────────────────────────────────
       // Resend's free plan (using onboarding@resend.dev) redirects ALL emails
       // to the verified address, so badihkabir / badih00 emails end up in
-      // sabbadih5's inbox. Until a real domain is configured, only send to the
+      // the verified inbox. Until a real domain is configured, only send to the
       // verified dev address and skip everyone else.
-      const DEV_VERIFIED_EMAIL = 'sabbadih5@gmail.com'
+      const DEV_VERIFIED_EMAIL = getEnv('NOTIFICATION_TEST_EMAIL') || 'sabbadih5@gmail.com'
       const isUsingResendSandbox = !process.env.NOTIFICATION_EMAIL_FROM?.includes('@') ||
         process.env.NOTIFICATION_EMAIL_FROM.includes('resend.dev') ||
         process.env.NODE_ENV !== 'production'

@@ -1,9 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 import { theme } from '@/constants/colors'
 
-export default function LogoutButton() {
+export default function LogoutButton({ variant = 'default' }) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -15,6 +16,18 @@ export default function LogoutButton() {
 
     router.replace('/')
     router.refresh()
+  }
+
+  if (variant === 'mobile') {
+    return (
+      <button
+        onClick={handleLogout}
+        className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-purple-50 active:scale-[0.97]"
+      >
+        <LogOut className="size-4 flex-shrink-0" />
+        Log out
+      </button>
+    )
   }
 
   return (

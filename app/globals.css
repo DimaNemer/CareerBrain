@@ -21,6 +21,23 @@ body {
   outline-offset: 2px;
 }
 
+/* Responsive safety nets: never allow horizontal scroll on small screens */
+html,
+body {
+  overflow-x: hidden;
+}
+
+main {
+  width: 100%;
+  max-width: 100%;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Animated orbs for auth pages */
 .orb {
   position: absolute;

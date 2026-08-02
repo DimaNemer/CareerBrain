@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/sync",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/notify",
+      "schedule": "0 4 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/cron/sync/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/cron/notify/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/opportunities/sync/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/opportunities/sync/remotive/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/opportunities/sync/embed/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/cv-extract/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/match/route.js": {
+      "maxDuration": 60
+    }
+  }
+}

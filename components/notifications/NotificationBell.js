@@ -81,6 +81,7 @@ export default function NotificationBell({ userId }) {
           top: 'calc(100% + 8px)',
           right: 0,
           width: '380px',
+          maxWidth: 'calc(100vw - 24px)',
           maxHeight: '480px',
           background: theme.bg.card,
           borderRadius: '12px',
