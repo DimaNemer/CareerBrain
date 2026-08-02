@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import {} from 'next/navigation'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import NavLink from '@/components/NavLink'
@@ -10,34 +10,57 @@ import LogoutButton from '@/components/LogoutButton'
 import NotificationBellWrapper from '@/components/notifications/NotificationBellWrapper'
 import UserSearch from '@/components/UserSearch'
 import { theme } from '@/constants/colors'
-
-export default function Navbar({ isLoggedIn = false }) {
+export default function Navbar({
+  isLoggedIn = false,
+  role = null,
+}) {
   const [open, setOpen] = useState(false)
-  const pathname = usePathname()
+ 
 
-  // Close the mobile drawer whenever the route changes (link click / back button).
-  const [prevPathname, setPrevPathname] = useState(pathname)
-  if (prevPathname !== pathname) {
-    setPrevPathname(pathname)
-    setOpen(false)
-  }
+  const isEmployer = role === 'employer'
 
-  // Close the mobile drawer if the viewport grows to tablet/desktop width (>= 768px),
-  // e.g. rotating a phone to landscape or resizing a window.
-  useEffect(() => {
-    if (!open) return
-    const mq = window.matchMedia('(min-width: 768px)')
-    const handleChange = (e) => { if (e.matches) setOpen(false) }
-    mq.addEventListener('change', handleChange)
-    return () => mq.removeEventListener('change', handleChange)
-  }, [open])
+  const dashboardHref = isEmployer
+    ? '/employer/dashboard'
+    : '/dashboard'
+
+  const profileHref = isEmployer
+    ? '/employer/profile'
+    : '/profile'
 
   const close = () => setOpen(false)
-  const toggle = () => setOpen((o) => !o)
+  const toggle = () =>
+    setOpen(currentOpen => !currentOpen)
+
+  useEffect(() => {
+    if (!open) return
+
+    const mq = window.matchMedia(
+      '(min-width: 768px)'
+    )
+
+    const handleChange = event => {
+      if (event.matches) {
+        setOpen(false)
+      }
+    }
+
+    mq.addEventListener(
+      'change',
+      handleChange
+    )
+
+    return () => {
+      mq.removeEventListener(
+        'change',
+        handleChange
+      )
+    }
+  }, [open])
 
   const logo = (
     <Link
-      href={isLoggedIn ? '/dashboard' : '/'}
+      href={isLoggedIn ? dashboardHref : '/'}
+      onClick={close}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -133,21 +156,23 @@ export default function Navbar({ isLoggedIn = false }) {
               gap: '4px',
             }}
           >
-            <NavLink href="/upload-cv">
-              Upload CV
-            </NavLink>
+        {!isEmployer && (
+  <NavLink href="/upload-cv">
+    Upload CV
+  </NavLink>
+)}
 
-            <NavLink href="/opportunities">
-              Jobs
-            </NavLink>
+<NavLink href="/opportunities">
+  Jobs
+</NavLink>
 
-            <NavLink href="/projects">
-              Projects
-            </NavLink>
+<NavLink href="/projects">
+  Projects
+</NavLink>
 
-            <NavLink href="/profile">
-              Profile
-            </NavLink>
+<NavLink href={profileHref}>
+  Profile
+</NavLink>
 
             <div style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <UserSearch />
@@ -261,18 +286,39 @@ export default function Navbar({ isLoggedIn = false }) {
               {isLoggedIn ? (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <NavLink mobile href="/upload-cv" onClick={close}>
-                      Upload CV
-                    </NavLink>
-                    <NavLink mobile href="/opportunities" onClick={close}>
-                      Jobs
-                    </NavLink>
-                    <NavLink mobile href="/projects" onClick={close}>
-                      Projects
-                    </NavLink>
-                    <NavLink mobile href="/profile" onClick={close}>
-                      Profile
-                    </NavLink>
+               {!isEmployer && (
+  <NavLink
+    mobile
+    href="/upload-cv"
+    onClick={close}
+  >
+    Upload CV
+  </NavLink>
+)}
+
+<NavLink
+  mobile
+  href="/opportunities"
+  onClick={close}
+>
+  Jobs
+</NavLink>
+
+<NavLink
+  mobile
+  href="/projects"
+  onClick={close}
+>
+  Projects
+</NavLink>
+
+<NavLink
+  mobile
+  href={profileHref}
+  onClick={close}
+>
+  Profile
+</NavLink>
                   </div>
 
                   <div
