@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-import { rateLimit } from '@/lib/rate-limit'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request) {
   try {
     // Rate limit: max 3 attempts per IP per 15 minutes
-    const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
+    const ip = getClientIp(request)
     const { limited } = rateLimit(`forgot-password:${ip}`, 3, 15 * 60 * 1000)
 
     if (limited) {

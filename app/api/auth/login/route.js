@@ -51,16 +51,20 @@
 // app/api/auth/login/route.js
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-import { rateLimit } from '@/lib/rate-limit'
+import {
+  peekRateLimit,
+  recordRateLimitFailure,
+  clearRateLimit,
+  getClientIp,
+} from '@/lib/rate-limit'
 
 export async function POST(request) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'unknown'
-    const { limited } = rateLimit(`login:${ip}`)
+    const ip = getClientIp(request)
 
-    if (limited) {
+    if (peekRateLimit(`login:${ip}`).limited) {
       return NextResponse.json(
-        { error: 'Too many attempts. Please try again in 15 minutes.' },
+        { error: 'Too many failed attempts. Please try again in 15 minutes.' },
         { status: 429 }
       )
     }
@@ -82,11 +86,15 @@ export async function POST(request) {
     })
 
     if (error) {
+      recordRateLimitFailure(`login:${ip}`)
+
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
+
+    clearRateLimit(`login:${ip}`)
 
     return NextResponse.json(
       {
