@@ -22,26 +22,108 @@ const backUrl =
 
   const { data: profile, error } = await publicSupabase
     .from('profiles')
-    .select(`
-      id, username, full_name, headline, avatar_url, bio,
-      education_level, university, graduation_year,major,
-      linkedin_url, github_url, portfolio_url,
-      user_skills (
-        proficiency_level, source,
-        skills ( name, category )
-      )
-    `)
+   .select(`
+  id,
+  username,
+  full_name,
+  headline,
+  avatar_url,
+  bio,
+  location,
+  role,
+  education_level,
+  university,
+  graduation_year,
+  major,
+  linkedin_url,
+  github_url,
+  portfolio_url,
+  user_skills (
+    proficiency_level,
+    source,
+    skills (
+      name,
+      category
+    )
+  )
+`)
     .eq('id', id)
     .single()
 
   if (error || !profile) notFound()
+const {
+  data: experiences = [],
+  error: experienceError,
+} = await publicSupabase
+  .from('profile_experience')
+  .select(`
+    id,
+    company_id,
+    company_name,
+    job_title,
+    location,
+    start_date,
+    end_date,
+    is_current,
+    description,
+    companies (
+      id,
+      name,
+      logo_url
+    )
+  `)
+  .eq('user_id', id)
+  .order('is_current', {
+    ascending: false,
+  })
+  .order('start_date', {
+    ascending: false,
+  })
 
+if (experienceError) {
+  console.error(
+    'Profile experience error:',
+    experienceError.message
+  )
+}
   const { data: { user: viewer } } = await supabase.auth.getUser()
 
   if (viewer && viewer.id !== id) {
     sendProfileViewNotification({ profileOwnerId: id, viewerId: viewer.id })
   }
+const {
+  data: currentMembership,
+  error: membershipError,
+} = await publicSupabase
+  .from('company_members')
+  .select(`
+    company_id,
+    job_title,
+    role,
+    companies (
+      id,
+      name,
+      logo_url,
+      industry,
+      location
+    )
+  `)
+  .eq('user_id', id)
+  .eq('is_current', true)
+  .maybeSingle()
 
+if (membershipError) {
+  console.error(
+    'Profile company membership error:',
+    membershipError.message
+  )
+}
+
+const currentCompany = Array.isArray(
+  currentMembership?.companies
+)
+  ? currentMembership.companies[0]
+  : currentMembership?.companies
   // Completed projects as member
   const { data: memberCompleted } = await supabase
     .from('project_members')
@@ -232,6 +314,42 @@ const { data: posts } = await supabase
                   {profile.headline}
                 </p>
               )}
+              {currentCompany && (
+  <p
+    style={{
+      fontSize: '14px',
+      color: 'rgba(255,255,255,0.5)',
+      margin: '0 0 6px',
+    }}
+  >
+    {currentMembership?.job_title
+      ? `${currentMembership.job_title} at `
+      : ''}
+      
+    <Link
+      href={`/company/${currentCompany.id}`}
+      style={{
+        color: '#A5B4FC',
+        textDecoration: 'none',
+        fontWeight: 600,
+      }}
+    >
+      {currentCompany.name}
+    </Link>
+  </p>
+)}
+
+{profile.location && (
+  <p
+    style={{
+      fontSize: '13px',
+      color: 'rgba(255,255,255,0.4)',
+      margin: '0 0 6px',
+    }}
+  >
+    📍 {profile.location}
+  </p>
+)}
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', margin: '0 0 18px' }}>
                 @{profile.username}
               </p>
@@ -327,6 +445,152 @@ const { data: posts } = await supabase
             </p>
           </div>
         )}
+
+
+          {experiences.length > 0 && (
+  <div
+    style={{
+      background: '#FFFFFF',
+      border: '1px solid #E5E7EB',
+      borderRadius: '20px',
+      padding: '24px 28px',
+      marginBottom: '16px',
+    }}
+  >
+    <SectionTitle count={experiences.length}>
+      Experience
+    </SectionTitle>
+
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+      }}
+    >
+      {experiences.map(experience => {
+        const experienceCompany =
+          Array.isArray(experience.companies)
+            ? experience.companies[0]
+            : experience.companies
+
+        const companyName =
+          experienceCompany?.name ||
+          experience.company_name ||
+          'Company'
+
+        return (
+          <div
+            key={experience.id}
+            style={{
+              padding: '18px',
+              background: '#F9FAFB',
+              border: '1px solid #E5E7EB',
+              borderRadius: '15px',
+            }}
+          >
+            <h3
+              style={{
+                margin: '0 0 5px',
+                fontSize: '15px',
+                color: '#111827',
+              }}
+            >
+              {experience.job_title}
+            </h3>
+
+            {experienceCompany ? (
+              <Link
+                href={`/company/${experienceCompany.id}`}
+                style={{
+                  color: '#4F46E5',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                {companyName}
+              </Link>
+            ) : (
+              <p
+                style={{
+                  margin: 0,
+                  color: '#4B5563',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                }}
+              >
+                {companyName}
+              </p>
+            )}
+
+            <p
+              style={{
+                margin: '6px 0 0',
+                color: '#9CA3AF',
+                fontSize: '12px',
+              }}
+            >
+              {experience.start_date
+                ? new Date(
+                    experience.start_date
+                  ).toLocaleDateString(
+                    'en-US',
+                    {
+                      month: 'short',
+                      year: 'numeric',
+                    }
+                  )
+                : ''}
+
+              {' – '}
+
+              {experience.is_current
+                ? 'Present'
+                : experience.end_date
+                  ? new Date(
+                      experience.end_date
+                    ).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'short',
+                        year: 'numeric',
+                      }
+                    )
+                  : ''}
+            </p>
+
+            {experience.location && (
+              <p
+                style={{
+                  margin: '5px 0 0',
+                  color: '#9CA3AF',
+                  fontSize: '12px',
+                }}
+              >
+                📍 {experience.location}
+              </p>
+            )}
+
+            {experience.description && (
+              <p
+                style={{
+                  margin: '10px 0 0',
+                  color: '#4B5563',
+                  fontSize: '13px',
+                  lineHeight: 1.7,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {experience.description}
+              </p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  </div>
+)}
 {(
   profile.education_level ||
   profile.major ||
@@ -342,6 +606,7 @@ const { data: posts } = await supabase
       marginBottom: '16px',
     }}
   >
+  
     <SectionTitle>Education</SectionTitle>
 
     <div

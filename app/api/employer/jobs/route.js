@@ -21,29 +21,99 @@ const VALID_QUESTION_TYPES = [
 
 // ── Verify user is an employer ────────────────────────────────────────────────
 async function verifyEmployer(supabase) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
   if (authError || !user) {
-    return { authorized: false, status: 401, error: 'Not authenticated' }
+    return {
+      authorized: false,
+      status: 401,
+      error: 'Not authenticated',
+    }
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, company_name')
-    .eq('id', user.id)
-    .single()
+  const { data: profile, error: profileError } =
+    await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .single()
 
-  if (!profile || profile.role !== 'employer') {
-    return { authorized: false, status: 403, error: 'Employer access required' }
+  if (profileError || !profile) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Employer access required',
+    }
   }
 
-  return { authorized: true, user, profile }
+  if (profile.role !== 'employer') {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Employer access required',
+    }
+  }
+
+  const {
+    data: membership,
+    error: membershipError,
+  } = await supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  if (membershipError || !membership) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'No active company membership found',
+    }
+  }
+
+  const company = Array.isArray(membership.companies)
+    ? membership.companies[0]
+    : membership.companies
+
+  if (!company) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Company not found',
+    }
+  }
+
+  return {
+    authorized: true,
+    user,
+    profile,
+    membership,
+    company,
+  }
 }
 
 // ── GET /api/employer/jobs ────────────────────────────────────────────────────
 export async function GET(request) {
   try {
     const supabase = await createClient()
-    const { authorized, status, error, user } = await verifyEmployer(supabase)
+    const {
+  authorized,
+  status,
+  error,
+  company,
+} = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })
 
     const { searchParams } = new URL(request.url)
@@ -52,7 +122,7 @@ export async function GET(request) {
     let query = supabase
       .from('job_postings')
       .select('*')
-      .eq('employer_id', user.id)
+      .eq('company_id', company.id)
       .order('created_at', { ascending: false })
 
     if (filter === 'active') query = query.eq('is_active', true)
@@ -74,8 +144,28 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = await createClient()
-    const { authorized, status, error, user, profile } = await verifyEmployer(supabase)
+   const {
+  authorized,
+  status,
+  error,
+  user,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })
+      if (
+  !['owner', 'admin', 'recruiter'].includes(
+    membership.role
+  )
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to create jobs for this company',
+    },
+    { status: 403 }
+  )
+}
 
     const body = await request.json()
   const {
@@ -222,15 +312,21 @@ for (const question of questions) {
       .from('job_postings')
       .insert({
         employer_id: user.id,
-        title: title.trim(),
-        company_name: profile.company_name || 'Company',
+company_id: company.id,
+created_by: user.id,
+
+title: title.trim(),
+company_name: company.name || 'Company',
         location: location?.trim() || null,
         employment_type: employment_type || null,
         experience_level: experience_level || null,
         description: description.trim(),
         requirements: requirements?.trim() || null,
-        salary_min: salary_min || null,
-        salary_max: salary_max || null,
+       salary_min:
+  salary_min !== undefined ? salary_min : null,
+
+salary_max:
+  salary_max !== undefined ? salary_max : null,
         is_active: is_active !== false,
         require_resume,
 cover_letter_requirement,

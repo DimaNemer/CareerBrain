@@ -14,24 +14,19 @@ export default async function EmployerProfilePage() {
     redirect('/login')
   }
 
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      full_name,
-      username,
-      role,
-      company_name,
-      company_size,
-      company_industry,
-      company_location,
-      company_website
-    `)
-    .eq('id', user.id)
-    .single()
+const {
+  data: profile,
+  error: profileError,
+} = await supabase
+  .from('profiles')
+  .select(`
+    id,
+    full_name,
+    username,
+    role
+  `)
+  .eq('id', user.id)
+  .single()
 
   if (
     profileError ||
@@ -40,7 +35,44 @@ export default async function EmployerProfilePage() {
   ) {
     redirect('/dashboard')
   }
+const {
+  data: membership,
+  error: membershipError,
+} = await supabase
+  .from('company_members')
+  .select(`
+    company_id,
+    role,
+    job_title,
+    companies (
+      id,
+      name,
+      slug,
+      logo_url,
+      description,
+      industry,
+      company_size,
+      location,
+      website,
+      company_values,
+      company_benefits
+    )
+  `)
+  .eq('user_id', user.id)
+  .eq('is_current', true)
+  .maybeSingle()
 
+if (membershipError || !membership) {
+  redirect('/employer/dashboard')
+}
+
+const company = Array.isArray(membership.companies)
+  ? membership.companies[0]
+  : membership.companies
+
+if (!company) {
+  redirect('/employer/dashboard')
+}
   const {
     data: jobs,
     error: jobsError,
@@ -55,7 +87,7 @@ export default async function EmployerProfilePage() {
       is_active,
       created_at
     `)
-    .eq('employer_id', user.id)
+   .eq('company_id', company.id)
     .order('created_at', {
       ascending: false,
     })
@@ -78,24 +110,274 @@ export default async function EmployerProfilePage() {
   const inactiveJobs = safeJobs.filter(
     job => !job.is_active
   ).length
+const safeWebsite = getSafeWebsite(
+  company.website
+)
 
-  const safeWebsite = getSafeWebsite(
-    profile.company_website
-  )
-
-  const companyInitials =
-    profile.company_name
-      ?.split(/\s+/)
-      .filter(Boolean)
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || 'CO'
+const companyInitials =
+  company.name
+    ?.split(/\s+/)
+    .filter(Boolean)
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'CO'
 
   return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={topActionsStyle}>
+  <main
+    className="employer-profile-page"
+    style={pageStyle}
+  >
+    <style>{`
+      @media screen and (max-width: 768px) {
+        .employer-profile-page {
+          padding: 30px 18px 50px !important;
+        }
+
+        /* TOP ACTIONS */
+
+        .profile-top-actions {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 14px !important;
+        }
+
+        .profile-action-buttons {
+          display: grid !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          width: 100% !important;
+          gap: 10px !important;
+        }
+
+        .profile-action-buttons a {
+          width: 100% !important;
+          box-sizing: border-box !important;
+          text-align: center !important;
+        }
+
+        .profile-create-job {
+          grid-column: 1 / -1;
+        }
+
+        /* HERO */
+
+        .profile-hero {
+          padding: 22px !important;
+          border-radius: 20px !important;
+        }
+
+        .profile-hero-content {
+          gap: 15px !important;
+        }
+
+        .profile-logo {
+          width: 62px !important;
+          height: 62px !important;
+          border-radius: 18px !important;
+          font-size: 20px !important;
+        }
+
+        .profile-company-title {
+          font-size: 27px !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .profile-hero-stats {
+          margin-top: 22px !important;
+        }
+
+        .profile-hero-stat {
+          padding: 14px 8px !important;
+        }
+
+        /* MAIN PAGE LAYOUT */
+
+        .profile-content-grid {
+          display: flex !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          gap: 20px !important;
+        }
+
+        .profile-main-column,
+        .profile-side-column {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          gap: 20px !important;
+        }
+
+        /* CARDS */
+
+        .profile-card,
+        .profile-highlight-card {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+          padding: 18px !important;
+          border-radius: 16px !important;
+        }
+
+        /* COMPANY DETAILS */
+
+        .profile-details-grid {
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+        }
+
+        .profile-detail-card {
+          padding: 14px !important;
+          min-width: 0 !important;
+        }
+
+        .profile-detail-value {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .profile-website-link {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+       /* JOBS */
+
+.profile-job-card {
+  padding: 14px !important;
+  gap: 12px !important;
+}
+
+.profile-job-main {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  min-width: 0 !important;
+  align-items: flex-start !important;
+}
+
+.profile-job-info {
+  flex: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.profile-job-title {
+  margin-bottom: 5px !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+.profile-job-meta {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  line-height: 1.5 !important;
+}
+
+.profile-job-right {
+  width: 100% !important;
+  justify-content: space-between !important;
+}
+
+        /* EMPLOYER ACCOUNT */
+
+        .profile-account-row {
+          gap: 12px !important;
+        }
+
+        .profile-account-label {
+          flex: 1 1 45%;
+          min-width: 0 !important;
+        }
+
+        .profile-account-value {
+          flex: 1 1 55%;
+          min-width: 0 !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+      }
+
+
+      @media screen and (max-width: 480px) {
+        .employer-profile-page {
+          padding: 24px 14px 40px !important;
+        }
+
+        .profile-action-buttons {
+          grid-template-columns: 1fr !important;
+        }
+
+        .profile-create-job {
+          grid-column: auto;
+        }
+
+        .profile-hero {
+          padding: 18px !important;
+        }
+
+        .profile-hero-content {
+          align-items: flex-start !important;
+        }
+
+        .profile-logo {
+          width: 56px !important;
+          height: 56px !important;
+          font-size: 18px !important;
+        }
+
+        .profile-company-title {
+          font-size: 24px !important;
+        }
+
+        .profile-hero-stat {
+          padding: 12px 5px !important;
+        }
+
+        .profile-hero-stat-value {
+          font-size: 20px !important;
+        }
+
+        .profile-hero-stat-label {
+          font-size: 9px !important;
+          letter-spacing: 0 !important;
+        }
+
+        .profile-card,
+        .profile-highlight-card {
+          padding: 16px !important;
+        }
+
+        .profile-details-grid {
+          gap: 8px !important;
+        }
+
+        .profile-detail-card {
+          padding: 12px !important;
+        }
+
+        .profile-detail-label {
+          font-size: 9px !important;
+        }
+
+        .profile-detail-value {
+          font-size: 12px !important;
+        }
+
+     .profile-job-icon {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+}
+      }
+    `}</style>
+
+    <div style={containerStyle}>
+      <div
+  className="profile-top-actions"
+  style={topActionsStyle}
+>
           <Link
             href="/employer/dashboard"
             style={backLinkStyle}
@@ -103,7 +385,8 @@ export default async function EmployerProfilePage() {
             ← Back to employer dashboard
           </Link>
 
-       <div
+ <div
+  className="profile-action-buttons"
   style={{
     display: 'flex',
     alignItems: 'center',
@@ -111,56 +394,81 @@ export default async function EmployerProfilePage() {
     flexWrap: 'wrap',
   }}
 >
-    <Link
-  href={`/company/${user.id}?from=${encodeURIComponent(
-    '/employer/profile'
-  )}`}
-  style={secondaryButtonStyle}
->
-  View public profile
-</Link>
+  <Link
+    href={`/profile/${user.id}?from=${encodeURIComponent(
+      '/employer/profile'
+    )}`}
+    style={secondaryButtonStyle}
+  >
+    My profile
+  </Link>
+
+  <Link
+    href={`/company/${company.id}?from=${encodeURIComponent(
+      '/employer/profile'
+    )}`}
+    style={secondaryButtonStyle}
+  >
+    View company
+  </Link>
+
   <Link
     href="/employer/profile/edit"
     style={secondaryButtonStyle}
   >
-    Edit profile
+    Edit company
   </Link>
 
   <Link
     href="/employer/jobs/new"
     style={primaryButtonStyle}
+    className="profile-create-job"
   >
     + Create job
   </Link>
 </div>
         </div>
 
-        <section style={heroStyle}>
+       <section
+  className="profile-hero"
+  style={heroStyle}
+>
           <div style={heroPatternStyle} />
 
-          <div style={heroContentStyle}>
-            <div style={logoStyle}>
+         <div
+  className="profile-hero-content"
+  style={heroContentStyle}
+>
+           <div
+  className="profile-logo"
+  style={logoStyle}
+>
               {companyInitials}
             </div>
 
             <div style={companyHeadingStyle}>
-              <p style={eyebrowStyle}>
-                Employer profile
-              </p>
+            <p style={eyebrowStyle}>
+  Company workspace
+</p>
 
-              <h1 style={titleStyle}>
-                {profile.company_name ||
-                  'Your company'}
+              <h1
+  className="profile-company-title"
+  style={titleStyle}
+>
+               {company.name || 'Your company'}
               </h1>
 
               <p style={subtitleStyle}>
-                {profile.company_industry ||
-                  'Industry not specified'}
+              {company.industry ||
+  'Industry not specified'}
               </p>
             </div>
           </div>
 
-          <div style={heroStatsStyle}>
+         <div
+  className="profile-hero-stats"
+  style={heroStatsStyle}
+>
             <HeroStat
               label="Total jobs"
               value={totalJobs}
@@ -179,54 +487,53 @@ export default async function EmployerProfilePage() {
           </div>
         </section>
 
-        <section style={contentGridStyle}>
-          <div style={mainColumnStyle}>
-            <section style={cardStyle}>
+       <section
+  className="profile-content-grid"
+  style={contentGridStyle}
+>
+        <div
+  className="profile-main-column"
+  style={mainColumnStyle}
+>
+          <section
+  className="profile-card"
+  style={cardStyle}
+>
               <div style={sectionHeaderStyle}>
                 <div>
                   <h2 style={sectionTitleStyle}>
                     Company information
                   </h2>
 
-                  <p style={sectionDescriptionStyle}>
-                    Information connected to your
-                    employer account.
-                  </p>
+               <p style={sectionDescriptionStyle}>
+  Information about {company.name}.
+</p>
                 </div>
               </div>
 
-              <div style={detailsGridStyle}>
+             <div
+  className="profile-details-grid"
+  style={detailsGridStyle}
+>
                 <CompanyDetail
-                  label="Company name"
-                  value={
-                    profile.company_name ||
-                    'Not provided'
-                  }
-                />
+  label="Company name"
+  value={company.name || 'Not provided'}
+/>
 
-                <CompanyDetail
-                  label="Industry"
-                  value={
-                    profile.company_industry ||
-                    'Not provided'
-                  }
-                />
+<CompanyDetail
+  label="Industry"
+  value={company.industry || 'Not provided'}
+/>
 
-                <CompanyDetail
-                  label="Company size"
-                  value={
-                    profile.company_size ||
-                    'Not provided'
-                  }
-                />
+<CompanyDetail
+  label="Company size"
+  value={company.company_size || 'Not provided'}
+/>
 
-                <CompanyDetail
-                  label="Location"
-                  value={
-                    profile.company_location ||
-                    'Not provided'
-                  }
-                />
+<CompanyDetail
+  label="Location"
+  value={company.location || 'Not provided'}
+/>
               </div>
 
               <div style={websiteSectionStyle}>
@@ -236,12 +543,13 @@ export default async function EmployerProfilePage() {
 
                 {safeWebsite ? (
                   <a
-                    href={safeWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={websiteLinkStyle}
-                  >
-                    {profile.company_website} ↗
+  href={safeWebsite}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="profile-website-link"
+  style={websiteLinkStyle}
+>
+                   {company.website} ↗
                   </a>
                 ) : (
                   <p style={missingValueStyle}>
@@ -251,17 +559,19 @@ export default async function EmployerProfilePage() {
               </div>
             </section>
 
-            <section style={cardStyle}>
+          <section
+  className="profile-card"
+  style={cardStyle}
+>
               <div style={sectionHeaderStyle}>
                 <div>
                   <h2 style={sectionTitleStyle}>
                     Posted jobs
                   </h2>
 
-                  <p style={sectionDescriptionStyle}>
-                    Jobs created by this employer
-                    account.
-                  </p>
+                 <p style={sectionDescriptionStyle}>
+  Jobs posted by {company.name}.
+</p>
                 </div>
 
                 <Link
@@ -297,41 +607,48 @@ export default async function EmployerProfilePage() {
               ) : (
                 <div style={jobsListStyle}>
                   {safeJobs.map(job => (
-                    <Link
-                      key={job.id}
-                      href={`/employer/jobs/${job.id}`}
-                      style={jobCardStyle}
-                    >
-                      <div style={jobMainStyle}>
-                        <div style={jobIconStyle}>
-                          💼
-                        </div>
+                   <Link
+  key={job.id}
+  href={`/employer/jobs/${job.id}`}
+  className="profile-job-card"
+  style={jobCardStyle}
+>
+                      <div
+  className="profile-job-main"
+  style={jobMainStyle}
+>
+                    <div
+  className="profile-job-info"
+  style={jobInfoStyle}
+>
+  <h3
+    className="profile-job-title"
+    style={jobTitleStyle}
+  >
+    {job.title}
+  </h3>
 
-                        <div style={jobInfoStyle}>
-                          <h3 style={jobTitleStyle}>
-                            {job.title}
-                          </h3>
+  <p
+    className="profile-job-meta"
+    style={jobMetaStyle}
+  >
+    {job.location || 'Location not specified'}
 
-                          <p style={jobMetaStyle}>
-                            {job.location ||
-                              'Location not specified'}
+    {job.employment_type
+      ? ` · ${formatLabel(job.employment_type)}`
+      : ''}
 
-                            {job.employment_type
-                              ? ` · ${formatLabel(
-                                  job.employment_type
-                                )}`
-                              : ''}
-
-                            {job.experience_level
-                              ? ` · ${formatLabel(
-                                  job.experience_level
-                                )}`
-                              : ''}
-                          </p>
-                        </div>
+    {job.experience_level
+      ? ` · ${formatLabel(job.experience_level)}`
+      : ''}
+  </p>
+</div>
                       </div>
 
-                      <div style={jobRightStyle}>
+                      <div
+  className="profile-job-right"
+  style={jobRightStyle}
+>
                         <span
                           style={{
                             ...statusBadgeStyle,
@@ -364,38 +681,75 @@ export default async function EmployerProfilePage() {
             </section>
           </div>
 
-          <aside style={sideColumnStyle}>
-            <section style={cardStyle}>
+          <aside
+  className="profile-side-column"
+  style={sideColumnStyle}
+>
+            <section
+  className="profile-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Employer account
               </h2>
 
               <div style={accountListStyle}>
-                <AccountRow
-                  label="Account owner"
-                  value={
-                    profile.full_name ||
-                    'Not provided'
-                  }
-                />
+             <AccountRow
+  label="Account owner"
+  value={profile.full_name || 'Not provided'}
+/>
 
-                <AccountRow
-                  label="Username"
-                  value={
-                    profile.username
-                      ? `@${profile.username}`
-                      : 'Not provided'
-                  }
-                />
+<AccountRow
+  label="Username"
+  value={
+    profile.username
+      ? `@${profile.username}`
+      : 'Not provided'
+  }
+/>
 
-                <AccountRow
-                  label="Account type"
-                  value="Employer"
-                />
+<AccountRow
+  label="Job title"
+  value={
+    membership.job_title || 'Not provided'
+  }
+/>
+
+<AccountRow
+  label="Company role"
+  value={formatLabel(membership.role)}
+/>
               </div>
+              <div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginTop: '18px',
+  }}
+>
+  <Link
+    href={`/profile/${user.id}?from=${encodeURIComponent(
+      '/employer/profile'
+    )}`}
+    style={primaryButtonStyle}
+  >
+    View my professional profile
+  </Link>
+
+  <Link
+    href="/profile/edit"
+    style={secondaryButtonStyle}
+  >
+    Edit my professional profile
+  </Link>
+</div>
             </section>
 
-            <section style={highlightCardStyle}>
+          <section
+  className="profile-highlight-card"
+  style={highlightCardStyle}
+>
               <p style={highlightEyebrowStyle}>
                 Hiring workspace
               </p>
@@ -432,6 +786,7 @@ function HeroStat({
 }) {
   return (
     <div
+      className="profile-hero-stat"
       style={{
         ...heroStatStyle,
         borderRight: last
@@ -439,25 +794,39 @@ function HeroStat({
           : '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      <p style={heroStatValueStyle}>
+      <p
+        className="profile-hero-stat-value"
+        style={heroStatValueStyle}
+      >
         {value}
       </p>
 
-      <p style={heroStatLabelStyle}>
+      <p
+        className="profile-hero-stat-label"
+        style={heroStatLabelStyle}
+      >
         {label}
       </p>
     </div>
   )
 }
-
 function CompanyDetail({ label, value }) {
   return (
-    <div style={detailCardStyle}>
-      <p style={detailLabelStyle}>
+    <div
+      className="profile-detail-card"
+      style={detailCardStyle}
+    >
+      <p
+        className="profile-detail-label"
+        style={detailLabelStyle}
+      >
         {label}
       </p>
 
-      <p style={detailValueStyle}>
+      <p
+        className="profile-detail-value"
+        style={detailValueStyle}
+      >
         {value}
       </p>
     </div>
@@ -466,12 +835,21 @@ function CompanyDetail({ label, value }) {
 
 function AccountRow({ label, value }) {
   return (
-    <div style={accountRowStyle}>
-      <span style={accountLabelStyle}>
+    <div
+      className="profile-account-row"
+      style={accountRowStyle}
+    >
+      <span
+        className="profile-account-label"
+        style={accountLabelStyle}
+      >
         {label}
       </span>
 
-      <span style={accountValueStyle}>
+      <span
+        className="profile-account-value"
+        style={accountValueStyle}
+      >
         {value}
       </span>
     </div>

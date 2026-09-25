@@ -16,42 +16,72 @@ export default async function JobApplicantsPage({
     redirect('/login')
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role, company_name')
-      .eq('id', user.id)
-      .single()
+const { data: profile, error: profileError } =
+  await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .single()
 
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
-    redirect('/dashboard')
-  }
+if (
+  profileError ||
+  !profile ||
+  profile.role !== 'employer'
+) {
+  redirect('/dashboard')
+}
 
-  const { id } = await params
+const {
+  data: membership,
+  error: membershipError,
+} = await supabase
+  .from('company_members')
+  .select(`
+    company_id,
+    role,
+    job_title,
+    companies (
+      id,
+      name
+    )
+  `)
+  .eq('user_id', user.id)
+  .eq('is_current', true)
+  .maybeSingle()
 
-  /*
-   * The employer can only access applicants
-   * for a job that belongs to their account.
-   */
-  const { data: job, error: jobError } =
-    await supabase
-      .from('job_postings')
-      .select(`
-        id,
-        employer_id,
-        title,
-        company_name,
-        location,
-        employment_type,
-        is_active
-      `)
-      .eq('id', id)
-      .eq('employer_id', user.id)
-      .single()
+if (membershipError || !membership) {
+  redirect('/employer/dashboard')
+}
+
+const company = Array.isArray(membership.companies)
+  ? membership.companies[0]
+  : membership.companies
+
+if (!company) {
+  redirect('/employer/dashboard')
+}
+
+const { id } = await params
+
+const { data: job, error: jobError } =
+  await supabase
+    .from('job_postings')
+    .select(`
+      id,
+      company_id,
+      title,
+      company_name,
+      location,
+      employment_type,
+      is_active
+    `)
+    .eq('id', id)
+    .eq('company_id', company.id)
+    .single()
+
+if (jobError || !job) {
+  notFound()
+}
 
   if (jobError || !job) {
     notFound()
@@ -156,8 +186,101 @@ export default async function JobApplicantsPage({
   ).length
 
   return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
+   <main
+  className="applicants-page"
+  style={pageStyle}
+>
+  <style>{`
+    @media (max-width: 768px) {
+      .applicants-page {
+        padding: 32px 18px !important;
+      }
+
+      .applicants-header {
+        gap: 16px !important;
+        margin-bottom: 22px !important;
+      }
+
+      .applicants-heading {
+        font-size: 28px !important;
+      }
+
+      .applicants-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 9px !important;
+        margin-bottom: 20px !important;
+      }
+
+      .applicant-stat-card {
+        padding: 13px 10px !important;
+        border-radius: 12px !important;
+        min-width: 0;
+      }
+
+      .applicant-stat-label {
+        font-size: 10px !important;
+        margin-bottom: 5px !important;
+        overflow-wrap: break-word;
+      }
+
+      .applicant-stat-value {
+        font-size: 21px !important;
+      }
+
+      .applications-card {
+        padding: 18px !important;
+        border-radius: 16px !important;
+      }
+
+      .applicant-card {
+        padding: 14px !important;
+        gap: 14px !important;
+      }
+
+      .candidate-section {
+        flex-basis: 100% !important;
+      }
+
+      .applicant-right-section {
+        width: 100%;
+        justify-content: space-between !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .applicants-page {
+        padding: 26px 14px !important;
+      }
+
+      .applicants-stats {
+        gap: 7px !important;
+      }
+
+      .applicant-stat-card {
+        padding: 12px 8px !important;
+      }
+
+      .applicant-stat-label {
+        font-size: 9.5px !important;
+      }
+
+      .applicant-stat-value {
+        font-size: 20px !important;
+      }
+
+      .applications-card {
+        padding: 16px !important;
+      }
+
+      .candidate-avatar {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 12px !important;
+      }
+    }
+  `}</style>
+
+  <div style={containerStyle}>
         <Link
           href={`/employer/jobs/${job.id}`}
           style={backLinkStyle}
@@ -165,15 +288,21 @@ export default async function JobApplicantsPage({
           ← Back to job details
         </Link>
 
-        <section style={headerStyle}>
+        <section
+  className="applicants-header"
+  style={headerStyle}
+>
           <div>
             <p style={eyebrowStyle}>
               Employer workspace
             </p>
 
-            <h1 style={headingStyle}>
-              Applicants
-            </h1>
+         <h1
+  className="applicants-heading"
+  style={headingStyle}
+>
+  Applicants
+</h1>
 
             <p style={descriptionStyle}>
               Review candidates who applied for{' '}
@@ -192,7 +321,10 @@ export default async function JobApplicantsPage({
           </span>
         </section>
 
-        <section style={statsGridStyle}>
+        <section
+  className="applicants-stats"
+  style={statsGridStyle}
+>
           <StatCard
             label="Submitted"
             value={submittedCount}
@@ -226,7 +358,10 @@ export default async function JobApplicantsPage({
           </div>
         )}
 
-        <section style={cardStyle}>
+       <section
+  className="applications-card"
+  style={cardStyle}
+>
           <div style={cardHeaderStyle}>
             <div>
               <h2 style={sectionTitleStyle}>
@@ -268,13 +403,20 @@ export default async function JobApplicantsPage({
                   'Candidate'
 
                 return (
-                  <Link
-                    key={application.id}
-                    href={`/employer/jobs/${job.id}/applicants/${application.id}`}
-                    style={applicantCardStyle}
-                  >
-                    <div style={candidateSectionStyle}>
-                      <div style={avatarStyle}>
+               <Link
+  key={application.id}
+  href={`/employer/jobs/${job.id}/applicants/${application.id}`}
+  className="applicant-card"
+  style={applicantCardStyle}
+>
+                    <div
+  className="candidate-section"
+  style={candidateSectionStyle}
+>
+                      <div
+  className="candidate-avatar"
+  style={avatarStyle}
+>
                         {getInitials(applicantName)}
                       </div>
 
@@ -309,7 +451,10 @@ export default async function JobApplicantsPage({
                       </div>
                     </div>
 
-                    <div style={rightSectionStyle}>
+                   <div
+  className="applicant-right-section"
+  style={rightSectionStyle}
+>
                       <span
                         style={getStatusStyle(
                           application.status
@@ -337,10 +482,23 @@ export default async function JobApplicantsPage({
 
 function StatCard({ label, value }) {
   return (
-    <div style={statCardStyle}>
-      <p style={statLabelStyle}>{label}</p>
+    <div
+      className="applicant-stat-card"
+      style={statCardStyle}
+    >
+      <p
+        className="applicant-stat-label"
+        style={statLabelStyle}
+      >
+        {label}
+      </p>
 
-      <p style={statValueStyle}>{value}</p>
+      <p
+        className="applicant-stat-value"
+        style={statValueStyle}
+      >
+        {value}
+      </p>
     </div>
   )
 }

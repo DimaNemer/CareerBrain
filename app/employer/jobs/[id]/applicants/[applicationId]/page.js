@@ -174,30 +174,29 @@ export default function ApplicantDetailsPage() {
   }
 
   if (error && !application) {
-    return (
-      <main style={pageStyle}>
-        <div style={containerStyle}>
-          <Link
-            href={`/employer/jobs/${jobId}/applicants`}
-            style={backLinkStyle}
-          >
-            ← Back to applicants
-          </Link>
+  return (
+    <main style={pageStyle}>
+      <div style={containerStyle}>
+        <Link
+          href={`/employer/jobs/${jobId}/applicants`}
+          style={backLinkStyle}
+        >
+          ← Back to applicants
+        </Link>
 
-          <div style={errorPageStyle}>
-            <h1 style={errorTitleStyle}>
-              Unable to load application
-            </h1>
+        <div style={errorPageStyle}>
+          <h1 style={errorTitleStyle}>
+            Unable to load application
+          </h1>
 
-            <p style={errorDescriptionStyle}>
-              {error}
-            </p>
-          </div>
+          <p style={errorDescriptionStyle}>
+            {error}
+          </p>
         </div>
-      </main>
-    )
-  }
-
+      </div>
+    </main>
+  )
+}
   if (!application) {
     return null
   }
@@ -221,8 +220,183 @@ const applicantName =
 
 
   return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
+  <main
+    className="application-details-page"
+    style={pageStyle}
+  >
+    <style>{`
+      @media screen and (max-width: 768px) {
+        .application-details-page {
+          padding: 32px 18px !important;
+        }
+
+        .application-header {
+          flex-direction: column !important;
+          gap: 20px !important;
+        }
+
+        .candidate-header {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .candidate-heading,
+        .candidate-name-link {
+          font-size: 27px !important;
+          overflow-wrap: break-word !important;
+        }
+
+        .application-status-control {
+          width: 100% !important;
+        }
+
+        .application-status-select {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .application-summary-grid {
+          grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+        }
+
+        .application-summary-card {
+          padding: 14px !important;
+          min-width: 0 !important;
+        }
+
+        .application-summary-value {
+          font-size: 13px !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .application-content-grid {
+          display: flex !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          gap: 20px !important;
+        }
+
+        .application-main-column,
+        .application-side-column {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .application-card {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+          padding: 18px !important;
+          border-radius: 16px !important;
+        }
+
+        .resume-info {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          width: 100% !important;
+          gap: 14px !important;
+        }
+
+        .resume-file-info {
+          width: 100% !important;
+          min-width: 0 !important;
+        }
+
+        .resume-file-content {
+          flex: 1 !important;
+          min-width: 0 !important;
+        }
+
+        .resume-path {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .resume-unavailable {
+          align-self: flex-start !important;
+          max-width: 100% !important;
+          white-space: normal !important;
+        }
+
+        .cover-letter-text,
+        .answer-text {
+          width: 100% !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .detail-row {
+          width: 100% !important;
+          gap: 12px !important;
+        }
+
+        .detail-label {
+          min-width: 0 !important;
+          flex: 1 1 45% !important;
+        }
+
+        .detail-value {
+          min-width: 0 !important;
+          flex: 1 1 55% !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        .application-details-page {
+          padding: 26px 14px !important;
+        }
+
+        .candidate-avatar {
+          width: 54px !important;
+          height: 54px !important;
+          border-radius: 16px !important;
+          font-size: 18px !important;
+        }
+
+        .candidate-header {
+          gap: 13px !important;
+        }
+
+        .candidate-heading,
+        .candidate-name-link {
+          font-size: 24px !important;
+        }
+
+        .application-summary-grid {
+          gap: 8px !important;
+        }
+
+        .application-summary-card {
+          padding: 12px !important;
+          border-radius: 13px !important;
+        }
+
+        .application-summary-label {
+          font-size: 10px !important;
+        }
+
+        .application-summary-value {
+          font-size: 12px !important;
+        }
+
+        .application-card {
+          padding: 16px !important;
+        }
+
+        .resume-info {
+          padding: 13px !important;
+        }
+      }
+    `}</style>
+
+    <div style={containerStyle}>
         <Link
           href={`/employer/jobs/${jobId}/applicants`}
           style={backLinkStyle}
@@ -230,9 +404,18 @@ const applicantName =
           ← Back to applicants
         </Link>
 
-        <section style={headerStyle}>
-          <div style={candidateHeaderStyle}>
-            <div style={avatarStyle}>
+       <section
+  className="application-header"
+  style={headerStyle}
+>
+         <div
+  className="candidate-header"
+  style={candidateHeaderStyle}
+>
+            <div
+  className="candidate-avatar"
+  style={avatarStyle}
+>
               {getInitials(applicantName)}
             </div>
 
@@ -241,11 +424,15 @@ const applicantName =
                 Candidate application
               </p>
 
-              <h1 style={headingStyle}>
+             <h1
+  className="candidate-heading"
+  style={headingStyle}
+>
       <Link
   href={`/profile/${application.applicant_id}?from=${encodeURIComponent(
     `/employer/jobs/${jobId}/applicants/${applicationId}`
   )}`}
+ className="candidate-name-link"
   style={candidateNameLinkStyle}
 >
   {applicantName}
@@ -261,35 +448,41 @@ const applicantName =
             </div>
           </div>
 
-          <div style={statusControlStyle}>
+         <div
+  className="application-status-control"
+  style={statusControlStyle}
+>
             <label style={statusLabelStyle}>
               Application status
             </label>
 
-            <select
-              value={
-                application.status || 'submitted'
-              }
-              onChange={handleStatusChange}
-              disabled={updatingStatus}
-              style={{
-                ...statusSelectStyle,
-                opacity: updatingStatus
-                  ? 0.65
-                  : 1,
-                cursor: updatingStatus
-                  ? 'not-allowed'
-                  : 'pointer',
-              }}
-            >
+       <select
+  className="application-status-select"
+  value={
+    application.status || 'submitted'
+  }
+  onChange={handleStatusChange}
+  disabled={updatingStatus}
+  style={{
+    ...statusSelectStyle,
+    opacity: updatingStatus ? 0.65 : 1,
+    cursor: updatingStatus
+      ? 'not-allowed'
+      : 'pointer',
+  }}
+>
               {APPLICATION_STATUSES.map(
                 status => (
-                  <option
-                    key={status.value}
-                    value={status.value}
-                  >
-                    {status.label}
-                  </option>
+                <option
+  key={status.value}
+  value={status.value}
+  style={{
+    backgroundColor: '#111827',
+    color: '#FFFFFF',
+  }}
+>
+  {status.label}
+</option>
                 )
               )}
             </select>
@@ -314,7 +507,10 @@ const applicantName =
           </div>
         )}
 
-        <section style={summaryGridStyle}>
+      <section
+  className="application-summary-grid"
+  style={summaryGridStyle}
+>
           <SummaryCard
             label="Job"
             value={job?.title || 'Job posting'}
@@ -343,9 +539,18 @@ const applicantName =
           />
         </section>
 
-        <section style={contentGridStyle}>
-          <div style={mainColumnStyle}>
-            <section style={cardStyle}>
+       <section
+  className="application-content-grid"
+  style={contentGridStyle}
+>
+        <div
+  className="application-main-column"
+  style={mainColumnStyle}
+>
+           <section
+  className="application-card"
+  style={cardStyle}
+>
               <div style={sectionHeaderStyle}>
                 <div>
                   <h2 style={sectionTitleStyle}>
@@ -364,18 +569,30 @@ const applicantName =
               </div>
 
             {application.cv_url ? (
-  <div style={resumeInfoStyle}>
-    <div style={resumeFileInfoStyle}>
-      <div style={resumeIconStyle}>
-        PDF
-      </div>
+  <div
+  className="resume-info"
+  style={resumeInfoStyle}
+>
+   <div
+  className="resume-file-info"
+  style={resumeFileInfoStyle}
+>
+     <div
+  className="resume-icon"
+  style={resumeIconStyle}
+>
+  PDF
+</div>
 
-      <div>
+      <div className="resume-file-content">
         <p style={resumeTitleStyle}>
           Candidate resume
         </p>
 
-        <p style={resumePathStyle}>
+        <p
+  className="resume-path"
+  style={resumePathStyle}
+>
           {getReadableFileName(
             application.cv_url
           )}
@@ -393,9 +610,12 @@ const applicantName =
         View resume
       </a>
     ) : (
-      <span style={unavailableBadgeStyle}>
-        Resume temporarily unavailable
-      </span>
+   <span
+  className="resume-unavailable"
+  style={unavailableBadgeStyle}
+>
+  Resume temporarily unavailable
+</span>
     )}
   </div>
 ) : (
@@ -405,15 +625,21 @@ const applicantName =
 )}
             </section>
 
-            <section style={cardStyle}>
+         <section
+  className="application-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Cover letter
               </h2>
 
               {application.cover_letter ? (
-                <div style={textContentStyle}>
-                  {application.cover_letter}
-                </div>
+             <div
+  className="cover-letter-text"
+  style={textContentStyle}
+>
+  {application.cover_letter}
+</div>
               ) : (
                 <div style={emptySectionStyle}>
                   No cover letter was submitted.
@@ -421,7 +647,10 @@ const applicantName =
               )}
             </section>
 
-            <section style={cardStyle}>
+          <section
+  className="application-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Screening answers
               </h2>
@@ -465,9 +694,7 @@ const applicantName =
                               'Screening question'}
                           </h3>
 
-                          <div
-                            style={answerTextStyle}
-                          >
+                        <div style={answerTextStyle}>
                             {answer.answer_text ||
                               'No answer provided'}
                           </div>
@@ -485,8 +712,14 @@ const applicantName =
             </section>
           </div>
 
-          <aside style={sideColumnStyle}>
-            <section style={cardStyle}>
+          <aside
+  className="application-side-column"
+  style={sideColumnStyle}
+>
+            <section
+  className="application-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Candidate profile
               </h2>
@@ -516,7 +749,10 @@ const applicantName =
               )}
             </section>
 
-            <section style={cardStyle}>
+           <section
+  className="application-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Application details
               </h2>
@@ -565,21 +801,44 @@ const applicantName =
 
 function SummaryCard({ label, value }) {
   return (
-    <div style={summaryCardStyle}>
-      <p style={summaryLabelStyle}>{label}</p>
-      <p style={summaryValueStyle}>{value}</p>
+    <div
+      className="application-summary-card"
+      style={summaryCardStyle}
+    >
+      <p
+        className="application-summary-label"
+        style={summaryLabelStyle}
+      >
+        {label}
+      </p>
+
+      <p
+        className="application-summary-value"
+        style={summaryValueStyle}
+      >
+        {value}
+      </p>
     </div>
   )
 }
 
 function DetailRow({ label, value }) {
   return (
-    <div style={detailRowStyle}>
-      <span style={detailLabelStyle}>
+    <div
+      className="detail-row"
+      style={detailRowStyle}
+    >
+      <span
+        className="detail-label"
+        style={detailLabelStyle}
+      >
         {label}
       </span>
 
-      <span style={detailValueStyle}>
+      <span
+        className="detail-value"
+        style={detailValueStyle}
+      >
         {value}
       </span>
     </div>

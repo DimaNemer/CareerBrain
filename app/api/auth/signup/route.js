@@ -1,147 +1,7 @@
-
-// import { createClient } from '@/lib/supabase-server'
-// import { NextResponse } from 'next/server'
-// import { rateLimit } from '@/lib/rate-limit'
-
-// export async function POST(request) {
-//   try {
-//     // Rate limit: max 5 signups per IP per hour
-//     const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
-//     const { limited } = rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000)
-
-//     if (limited) {
-//       return NextResponse.json(
-//         { error: 'Too many signup attempts. Please try again later.' },
-//         { status: 429 }
-//       )
-//     }
-
-//     const body = await request.json()
-//     const { full_name, username, email, password } = body
-
-//     // Validate all fields exist
-//     if (!full_name || !username || !email || !password) {
-//       return NextResponse.json(
-//         { error: 'All fields are required' },
-//         { status: 400 }
-//       )
-//     }
-
-//     // Validate types are strings
-//     if (
-//       typeof full_name !== 'string' ||
-//       typeof username !== 'string' ||
-//       typeof email !== 'string' ||
-//       typeof password !== 'string'
-//     ) {
-//       return NextResponse.json(
-//         { error: 'Invalid input' },
-//         { status: 400 }
-//       )
-//     }
-
-//     // Sanitize
-//     const sanitizedEmail = email.trim().toLowerCase()
-//     const sanitizedUsername = username.trim().toLowerCase()
-//     const sanitizedName = full_name.trim()
-
-//     // Password strength
-//     if (password.length < 8) {
-//       return NextResponse.json(
-//         { error: 'Password must be at least 8 characters' },
-//         { status: 400 }
-//       )
-//     }
-
-//     if (!/\d/.test(password)) {
-//       return NextResponse.json(
-//         { error: 'Password must contain at least one number' },
-//         { status: 400 }
-//       )
-//     }
-
-//     // Username format: 3-30 chars, letters/numbers/underscores only
-//     const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/
-//     if (!usernameRegex.test(sanitizedUsername)) {
-//       return NextResponse.json(
-//         { error: 'Username must be 3–30 characters, letters/numbers/underscores only' },
-//         { status: 400 }
-//       )
-//     }
-
-//     // Full name length
-//     if (sanitizedName.length < 2 || sanitizedName.length > 100) {
-//       return NextResponse.json(
-//         { error: 'Full name must be between 2 and 100 characters' },
-//         { status: 400 }
-//       )
-//     }
-
-//     const supabase = await createClient()
-
-//     // Check username is not taken
-//     const { data: existingUsername } = await supabase
-//       .from('profiles')
-//       .select('id')
-//       .eq('username', sanitizedUsername)
-//       .maybeSingle()
-
-//     if (existingUsername) {
-//       return NextResponse.json(
-//         { error: 'Username is already taken' },
-//         { status: 409 }
-//       )
-//     }
-
-//     // Create the auth user
-//     // The database trigger automatically creates the profile row
-//     const { data: authData, error: authError } = await supabase.auth.signUp({
-//       email: sanitizedEmail,
-//       password,
-//       options: {
-//         data: {
-//           full_name: sanitizedName,
-//           username: sanitizedUsername,
-//         },
-//         // Where Supabase redirects after email confirmation
-//         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/login`,
-//       },
-//     })
-
-//     if (authError) {
-//       // Don't expose internal Supabase errors directly
-//       if (authError.message.includes('already registered')) {
-//         return NextResponse.json(
-//           { error: 'An account with this email already exists' },
-//           { status: 409 }
-//         )
-//       }
-//       return NextResponse.json(
-//         { error: authError.message },
-//         { status: 400 }
-//       )
-//     }
-
-//     return NextResponse.json(
-//       {
-//         message: 'Account created successfully',
-//         requiresConfirmation: !authData.session,
-//         email: sanitizedEmail,
-//       },
-//       { status: 201 }
-//     )
-//   } catch {
-//     return NextResponse.json(
-//       { error: 'Something went wrong' },
-//       { status: 500 }
-//     )
-//   }
-// }
-
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
-
+import { createServiceClient } from '@/lib/supabase-service'
 const VALID_ROLES = ['job_seeker', 'employer']
 
 const VALID_COMPANY_SIZES = [
@@ -434,38 +294,11 @@ export async function POST(request) {
         email: sanitizedEmail,
         password,
         options: {
-          data: {
-            full_name: sanitizedName,
-            username: sanitizedUsername,
-            role,
-
-            // Store company values only for employer accounts.
-            company_name:
-              role === 'employer'
-                ? sanitizedCompanyName
-                : null,
-
-            company_size:
-              role === 'employer'
-                ? sanitizedCompanySize
-                : null,
-
-            company_industry:
-              role === 'employer'
-                ? sanitizedCompanyIndustry
-                : null,
-
-            company_location:
-              role === 'employer'
-                ? sanitizedCompanyLocation
-                : null,
-
-            company_website:
-              role === 'employer'
-                ? sanitizedCompanyWebsite
-                : null,
-          },
-
+         data: {
+  full_name: sanitizedName,
+  username: sanitizedUsername,
+  role,
+},
           emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/login`,
         },
       })
@@ -496,7 +329,75 @@ export async function POST(request) {
         { status: 400 }
       )
     }
+    const serviceSupabase = createServiceClient()
+const newUserId = authData.user?.id
+if (role === 'employer' && newUserId) {
+  const companySlug =
+    sanitizedCompanyName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') +
+    '-' +
+    newUserId.slice(0, 8)
 
+  const {
+    data: company,
+    error: companyError,
+ } = await serviceSupabase
+  .from('companies')
+    .insert({
+      name: sanitizedCompanyName,
+      slug: companySlug,
+      company_size: sanitizedCompanySize,
+      industry: sanitizedCompanyIndustry,
+      location: sanitizedCompanyLocation,
+      website: sanitizedCompanyWebsite,
+      created_by: newUserId,
+    })
+    .select('id')
+    .single()
+
+  if (companyError) {
+    console.error(
+      'Company creation failed:',
+      companyError.message
+    )
+
+    return NextResponse.json(
+      {
+        error:
+          'Account was created, but the company could not be created.',
+      },
+      { status: 500 }
+    )
+  }
+
+ const { error: memberError } = await serviceSupabase
+  .from('company_members')
+    .insert({
+      company_id: company.id,
+      user_id: newUserId,
+      job_title: 'Company Administrator',
+      role: 'owner',
+      is_current: true,
+    })
+
+  if (memberError) {
+    console.error(
+      'Company membership creation failed:',
+      memberError.message
+    )
+
+    return NextResponse.json(
+      {
+        error:
+          'Account and company were created, but company membership could not be created.',
+      },
+      { status: 500 }
+    )
+  }
+}
     return NextResponse.json(
       {
         message: 'Account created successfully',

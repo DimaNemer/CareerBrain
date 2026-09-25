@@ -7,8 +7,6 @@ const MAX_COMPANY_INDUSTRY_LENGTH = 100
 const MAX_COMPANY_LOCATION_LENGTH = 150
 const MAX_COMPANY_WEBSITE_LENGTH = 2048
 const MAX_COMPANY_DESCRIPTION_LENGTH = 5000
-const MAX_EMPLOYER_HEADLINE_LENGTH = 200
-const MAX_EMPLOYER_EXPERIENCE_LENGTH = 5000
 const MAX_COMPANY_VALUES_LENGTH = 3000
 const MAX_COMPANY_BENEFITS_LENGTH = 3000
 
@@ -63,17 +61,19 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      role
-    `)
-    .eq('id', user.id)
-    .single()
+ const {
+  data: profile,
+  error: profileError,
+} = await supabase
+  .from('profiles')
+  .select(`
+    id,
+    full_name,
+    username,
+    role
+  `)
+  .eq('id', user.id)
+  .single()
 
   if (
     profileError ||
@@ -87,9 +87,59 @@ async function verifyEmployer(supabase) {
     }
   }
 
+  const {
+    data: membership,
+    error: membershipError,
+  } = await supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name,
+        slug,
+        logo_url,
+        description,
+        industry,
+        company_size,
+        location,
+        website,
+        company_values,
+        company_benefits
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  if (membershipError || !membership) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'No active company membership found',
+    }
+  }
+
+  const company = Array.isArray(membership.companies)
+    ? membership.companies[0]
+    : membership.companies
+
+  if (!company) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Company not found',
+    }
+  }
+
   return {
     authorized: true,
     user,
+    profile,
+    membership,
+    company,
   }
 }
 
@@ -102,7 +152,9 @@ export async function GET() {
       authorized,
       status,
       error,
-      user,
+      profile,
+      membership,
+      company,
     } = await verifyEmployer(supabase)
 
     if (!authorized) {
@@ -112,48 +164,16 @@ export async function GET() {
       )
     }
 
-    const {
-      data: profile,
-      error: profileError,
-    } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        full_name,
-        username,
-        role,
-        company_name,
-        company_size,
-        company_industry,
-        company_location,
-        company_website,
-        company_description,
-        company_logo_url,
-        employer_headline,
-        employer_experience,
-        company_values,
-        company_benefits
-      `)
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      console.error(
-        'Employer profile load failed:',
-        profileError?.message
-      )
-
-      return NextResponse.json(
-        {
-          error:
-            'Unable to load employer profile',
-        },
-        { status: 500 }
-      )
-    }
-
     return NextResponse.json(
-      { profile },
+      {
+        profile,
+        membership: {
+          company_id: membership.company_id,
+          role: membership.role,
+          job_title: membership.job_title,
+        },
+        company,
+      },
       { status: 200 }
     )
   } catch (error) {
@@ -174,12 +194,13 @@ export async function PUT(request) {
   try {
     const supabase = await createClient()
 
-    const {
-      authorized,
-      status,
-      error,
-      user,
-    } = await verifyEmployer(supabase)
+   const {
+  authorized,
+  status,
+  error,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
 
     if (!authorized) {
       return NextResponse.json(
@@ -187,7 +208,17 @@ export async function PUT(request) {
         { status }
       )
     }
-
+if (
+  !['owner', 'admin'].includes(membership.role)
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to edit company information',
+    },
+    { status: 403 }
+  )
+}
     let body
 
     try {
@@ -225,15 +256,7 @@ export async function PUT(request) {
         body.company_description
       )
 
-    const employerHeadline =
-      cleanOptionalString(
-        body.employer_headline
-      )
-
-    const employerExperience =
-      cleanOptionalString(
-        body.employer_experience
-      )
+  
 
     const companyValues =
       cleanOptionalString(
@@ -357,33 +380,7 @@ export async function PUT(request) {
       )
     }
 
-    if (
-      employerHeadline &&
-      employerHeadline.length >
-        MAX_EMPLOYER_HEADLINE_LENGTH
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Employer headline must not exceed 200 characters',
-        },
-        { status: 400 }
-      )
-    }
 
-    if (
-      employerExperience &&
-      employerExperience.length >
-        MAX_EMPLOYER_EXPERIENCE_LENGTH
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Employer experience must not exceed 5000 characters',
-        },
-        { status: 400 }
-      )
-    }
 
     if (
       companyValues &&
@@ -413,72 +410,67 @@ export async function PUT(request) {
       )
     }
 
-    const updates = {
-      company_name: companyName,
-      company_size: companySize,
-      company_industry: companyIndustry,
-      company_location: companyLocation,
-      company_website: companyWebsite,
-      company_description:
-        companyDescription,
-      employer_headline: employerHeadline,
-      employer_experience:
-        employerExperience,
-      company_values: companyValues,
-      company_benefits: companyBenefits,
-    }
+   const companyUpdates = {
+  name: companyName,
+  company_size: companySize,
+  industry: companyIndustry,
+  location: companyLocation,
+  website: companyWebsite,
+  description: companyDescription,
+  company_values: companyValues,
+  company_benefits: companyBenefits,
+  updated_at: new Date().toISOString(),
+}
 
-    const {
-      data: profile,
-      error: updateError,
-    } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id)
-      .eq('role', 'employer')
-      .select(`
-        id,
-        full_name,
-        username,
-        role,
-        company_name,
-        company_size,
-        company_industry,
-        company_location,
-        company_website,
-        company_description,
-        company_logo_url,
-        employer_headline,
-        employer_experience,
-        company_values,
-        company_benefits
-      `)
-      .single()
+const {
+  data: updatedCompany,
+  error: updateError,
+} = await supabase
+  .from('companies')
+  .update(companyUpdates)
+  .eq('id', company.id)
+  .select(`
+    id,
+    name,
+    slug,
+    logo_url,
+    description,
+    industry,
+    company_size,
+    location,
+    website,
+    company_values,
+    company_benefits,
+    created_by,
+    created_at,
+    updated_at
+  `)
+  .single()
 
-    if (updateError || !profile) {
-      console.error(
-        'Employer profile update failed:',
-        updateError?.message
-      )
+if (updateError || !updatedCompany) {
+  console.error(
+    'Company profile update failed:',
+    updateError?.message
+  )
 
-      return NextResponse.json(
-        {
-          error:
-            updateError?.message ||
-            'Unable to update employer profile',
-        },
-        { status: 500 }
-      )
-    }
+  return NextResponse.json(
+    {
+      error:
+        updateError?.message ||
+        'Unable to update company profile',
+    },
+    { status: 500 }
+  )
+}
 
-    return NextResponse.json(
-      {
-        message:
-          'Employer profile updated successfully',
-        profile,
-      },
-      { status: 200 }
-    )
+return NextResponse.json(
+  {
+    message:
+      'Company profile updated successfully',
+    company: updatedCompany,
+  },
+  { status: 200 }
+)
   } catch (error) {
     console.error(
       'Employer profile PUT error:',

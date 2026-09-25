@@ -35,7 +35,15 @@ const INITIAL_CERTIFICATE = {
   credential_id: '',
   credential_url: '',
 }
-
+const INITIAL_EXPERIENCE = {
+  job_title: '',
+  company_name: '',
+  location: '',
+  start_date: '',
+  end_date: '',
+  is_current: false,
+  description: '',
+}
 export default function ProfileEditPage() {
   const router = useRouter()
 
@@ -54,11 +62,26 @@ export default function ProfileEditPage() {
     useState('')
 const [editingCertificateId, setEditingCertificateId] =
   useState(null)
+  const [experiences, setExperiences] = useState([])
+const [experienceForm, setExperienceForm] =
+  useState(INITIAL_EXPERIENCE)
+
+const [experienceLoading, setExperienceLoading] =
+  useState(false)
+
+const [experienceError, setExperienceError] =
+  useState('')
+
+const [editingExperienceId, setEditingExperienceId] =
+  useState(null)
   useEffect(() => {
     async function loadData() {
       try {
-        const [profileResponse, certificatesResponse] =
-          await Promise.all([
+        const [
+  profileResponse,
+  certificatesResponse,
+  experiencesResponse,
+] = await Promise.all([
             fetch('/api/profile', {
               method: 'GET',
               cache: 'no-store',
@@ -67,8 +90,13 @@ const [editingCertificateId, setEditingCertificateId] =
               method: 'GET',
               cache: 'no-store',
             }),
+            fetch('/api/profile/experience', {
+  method: 'GET',
+  cache: 'no-store',
+}),
           ])
-
+const experiencesData =
+  await experiencesResponse.json()
         const profileData = await profileResponse.json()
         const certificatesData =
           await certificatesResponse.json()
@@ -122,6 +150,16 @@ const [editingCertificateId, setEditingCertificateId] =
             certificatesData.certificates || []
           )
         }
+        if (!experiencesResponse.ok) {
+  setExperienceError(
+    experiencesData.error ||
+      'Failed to load experience'
+  )
+} else {
+  setExperiences(
+    experiencesData.experiences || []
+  )
+}
       } catch (loadError) {
         console.error('Profile load error:', loadError)
         setError('Failed to load profile')
@@ -132,7 +170,237 @@ const [editingCertificateId, setEditingCertificateId] =
 
     loadData()
   }, [router])
+function handleExperienceChange(event) {
+  const {
+    name,
+    value,
+    type,
+    checked,
+  } = event.target
 
+  setExperienceForm(previous => ({
+    ...previous,
+    [name]:
+      type === 'checkbox'
+        ? checked
+        : value,
+  }))
+
+  setExperienceError('')
+}
+function handleCancelExperienceEdit() {
+  setEditingExperienceId(null)
+  setExperienceForm(INITIAL_EXPERIENCE)
+  setExperienceError('')
+}
+
+async function handleSaveExperience(event) {
+  event.preventDefault()
+
+  if (!experienceForm.job_title.trim()) {
+    setExperienceError(
+      'Job title is required'
+    )
+    return
+  }
+
+  if (!experienceForm.company_name.trim()) {
+    setExperienceError(
+      'Company name is required'
+    )
+    return
+  }
+
+  if (!experienceForm.start_date) {
+    setExperienceError(
+      'Start date is required'
+    )
+    return
+  }
+
+  setExperienceLoading(true)
+  setExperienceError('')
+
+  try {
+    const editing =
+      Boolean(editingExperienceId)
+
+    const response = await fetch(
+      '/api/profile/experience',
+      {
+        method: editing ? 'PUT' : 'POST',
+
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: JSON.stringify({
+          id: editingExperienceId,
+
+          job_title:
+            experienceForm.job_title.trim(),
+
+          company_name:
+            experienceForm.company_name.trim(),
+
+          location:
+            experienceForm.location.trim() ||
+            null,
+
+          start_date:
+            experienceForm.start_date,
+
+          end_date:
+            experienceForm.is_current
+              ? null
+              : experienceForm.end_date ||
+                null,
+
+          is_current:
+            experienceForm.is_current,
+
+          description:
+            experienceForm.description.trim() ||
+            null,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      setExperienceError(
+        data.error ||
+          'Failed to save experience'
+      )
+      return
+    }
+
+    if (editing) {
+      setExperiences(previous =>
+        previous.map(experience =>
+          experience.id ===
+          editingExperienceId
+            ? data.experience
+            : experience
+        )
+      )
+    } else {
+      setExperiences(previous => [
+        data.experience,
+        ...previous,
+      ])
+    }
+
+    setEditingExperienceId(null)
+    setExperienceForm(INITIAL_EXPERIENCE)
+    router.refresh()
+  } catch (error) {
+    console.error(
+      'Experience save error:',
+      error
+    )
+
+    setExperienceError(
+      'Failed to save experience'
+    )
+  } finally {
+    setExperienceLoading(false)
+  }
+}
+function handleEditExperience(experience) {
+  setEditingExperienceId(experience.id)
+
+  const experienceCompany = Array.isArray(
+    experience.companies
+  )
+    ? experience.companies[0]
+    : experience.companies
+
+  setExperienceForm({
+    job_title:
+      experience.job_title || '',
+
+    company_name:
+      experienceCompany?.name ||
+      experience.company_name ||
+      '',
+
+    location:
+      experience.location || '',
+
+    start_date:
+      experience.start_date || '',
+
+    end_date:
+      experience.end_date || '',
+
+    is_current:
+      experience.is_current === true,
+
+    description:
+      experience.description || '',
+  })
+}
+async function handleDeleteExperience(
+  experienceId
+) {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this experience?'
+  )
+
+  if (!confirmed) return
+
+  setExperienceError('')
+
+  try {
+    const response = await fetch(
+      `/api/profile/experience?experienceId=${encodeURIComponent(
+        experienceId
+      )}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      setExperienceError(
+        data.error ||
+          'Failed to delete experience'
+      )
+      return
+    }
+
+    setExperiences(previous =>
+      previous.filter(
+        experience =>
+          experience.id !== experienceId
+      )
+    )
+
+    if (
+      editingExperienceId === experienceId
+    ) {
+      setEditingExperienceId(null)
+      setExperienceForm(
+        INITIAL_EXPERIENCE
+      )
+    }
+
+    router.refresh()
+  } catch (error) {
+    console.error(
+      'Delete experience error:',
+      error
+    )
+
+    setExperienceError(
+      'Failed to delete experience'
+    )
+  }
+}
   function handleChange(event) {
     const { name, value } = event.target
 
@@ -877,7 +1145,295 @@ function handleCancelCertificateEdit() {
             </button>
           </div>
         </form>
+<section
+  style={{
+    ...cardStyle,
+    marginTop: '24px',
+  }}
+>
+  <CardHeading
+    icon="💼"
+    title="Work experience"
+    description="Add your current and previous professional experience."
+  />
 
+  {experienceError && (
+    <Alert
+      type="error"
+      message={experienceError}
+    />
+  )}
+
+  <form
+    onSubmit={handleSaveExperience}
+    style={{
+      padding: '20px',
+      borderRadius: '16px',
+      background:
+        'linear-gradient(135deg, #F7F7FF, #EEF0FF)',
+      border: '1px solid #DBDDFB',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '15px',
+    }}
+  >
+    <Row>
+      <Field
+        label="Job title"
+        name="job_title"
+        value={experienceForm.job_title}
+        onChange={handleExperienceChange}
+        placeholder="Software Developer"
+        required
+        maxLength={150}
+      />
+
+      <Field
+        label="Company"
+        name="company_name"
+        value={experienceForm.company_name}
+        onChange={handleExperienceChange}
+        placeholder="Company name"
+        required
+        maxLength={150}
+      />
+    </Row>
+
+    <Field
+      label="Location"
+      name="location"
+      value={experienceForm.location}
+      onChange={handleExperienceChange}
+      placeholder="Beirut, Lebanon"
+      maxLength={150}
+    />
+
+    <Row>
+      <Field
+        label="Start date"
+        name="start_date"
+        type="date"
+        value={experienceForm.start_date}
+        onChange={handleExperienceChange}
+        required
+      />
+
+      {!experienceForm.is_current && (
+        <Field
+          label="End date"
+          name="end_date"
+          type="date"
+          value={experienceForm.end_date}
+          onChange={handleExperienceChange}
+        />
+      )}
+    </Row>
+
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '9px',
+        color: '#475569',
+        fontSize: '13px',
+        fontWeight: 600,
+      }}
+    >
+      <input
+        type="checkbox"
+        name="is_current"
+        checked={experienceForm.is_current}
+        onChange={handleExperienceChange}
+      />
+
+      I currently work here
+    </label>
+
+    <TextareaField
+      label="Description"
+      name="description"
+      value={experienceForm.description}
+      onChange={handleExperienceChange}
+      placeholder="Describe your responsibilities, achievements, and work..."
+      rows={5}
+      maxLength={3000}
+    />
+
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '10px',
+        flexWrap: 'wrap',
+      }}
+    >
+      {editingExperienceId && (
+        <button
+          type="button"
+          onClick={
+            handleCancelExperienceEdit
+          }
+          disabled={experienceLoading}
+          style={secondaryButtonStyle}
+        >
+          Cancel edit
+        </button>
+      )}
+
+      <button
+        type="submit"
+        disabled={experienceLoading}
+        style={{
+          ...primaryButtonStyle,
+          opacity: experienceLoading
+            ? 0.7
+            : 1,
+        }}
+      >
+        {experienceLoading
+          ? 'Saving...'
+          : editingExperienceId
+            ? 'Save experience changes'
+            : '+ Add experience'}
+      </button>
+    </div>
+  </form>
+
+  <div
+    style={{
+      marginTop: '18px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    }}
+  >
+    {experiences.length === 0 ? (
+      <div
+        style={{
+          padding: '28px 20px',
+          textAlign: 'center',
+          borderRadius: '15px',
+          background: '#F8F9FD',
+          border:
+            '1px dashed #CCD0E5',
+          color: '#94A3B8',
+          fontSize: '12px',
+        }}
+      >
+        No work experience added yet.
+      </div>
+    ) : (
+      experiences.map(experience => {
+        const experienceCompany =
+          Array.isArray(
+            experience.companies
+          )
+            ? experience.companies[0]
+            : experience.companies
+
+        const companyName =
+          experienceCompany?.name ||
+          experience.company_name ||
+          'Company'
+
+        return (
+          <article
+            key={experience.id}
+            style={{
+              padding: '17px',
+              borderRadius: '15px',
+              background: '#FAFAFF',
+              border:
+                editingExperienceId ===
+                experience.id
+                  ? '1.5px solid #818CF8'
+                  : '1px solid #DDDEFA',
+              display: 'flex',
+              justifyContent:
+                'space-between',
+              gap: '14px',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <h3
+                style={{
+                  margin: '0 0 5px',
+                  fontSize: '14px',
+                  color: '#111827',
+                }}
+              >
+                {experience.job_title}
+              </h3>
+
+              <p
+                style={{
+                  margin: '0 0 5px',
+                  color: '#4F46E5',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                {companyName}
+              </p>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: '#94A3B8',
+                  fontSize: '11px',
+                }}
+              >
+                {experience.start_date || ''}
+                {' – '}
+                {experience.is_current
+                  ? 'Present'
+                  : experience.end_date ||
+                    ''}
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '7px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  handleEditExperience(
+                    experience
+                  )
+                }
+                style={secondaryButtonStyle}
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleDeleteExperience(
+                    experience.id
+                  )
+                }
+                style={{
+                  ...secondaryButtonStyle,
+                  color: '#DC2626',
+                  borderColor: '#FECACA',
+                  background: '#FEF2F2',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        )
+      })
+    )}
+  </div>
+</section>
         {/* Separate form: do not place inside the profile form */}
         <section
           style={{

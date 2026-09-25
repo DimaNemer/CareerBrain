@@ -26,7 +26,7 @@ async function verifyEmployer(supabase) {
   const { data: profile, error: profileError } =
     await supabase
       .from('profiles')
-      .select('id, role, company_name')
+      .select('id, role')
       .eq('id', user.id)
       .single()
 
@@ -42,10 +42,50 @@ async function verifyEmployer(supabase) {
     }
   }
 
+  const {
+    data: membership,
+    error: membershipError,
+  } = await supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  if (membershipError || !membership) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'No active company membership found',
+    }
+  }
+
+  const company = Array.isArray(membership.companies)
+    ? membership.companies[0]
+    : membership.companies
+
+  if (!company) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Company not found',
+    }
+  }
+
   return {
     authorized: true,
     user,
     profile,
+    membership,
+    company,
   }
 }
 
@@ -55,11 +95,12 @@ export async function GET(request, { params }) {
     const supabase = await createClient()
 
     const {
-      authorized,
-      status,
-      error,
-      user,
-    } = await verifyEmployer(supabase)
+  authorized,
+  status,
+  error,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
 
     if (!authorized) {
       return NextResponse.json(
@@ -91,19 +132,19 @@ export async function GET(request, { params }) {
         status,
         created_at,
         updated_at,
-        job_postings!inner (
-          id,
-          employer_id,
-          title,
-          company_name,
-          require_resume,
-          cover_letter_requirement,
-          share_profile,
-          share_match_score
-        )
+     job_postings!inner (
+  id,
+  company_id,
+  title,
+  company_name,
+  require_resume,
+  cover_letter_requirement,
+  share_profile,
+  share_match_score
+)
       `)
       .eq('id', applicationId)
-      .eq('job_postings.employer_id', user.id)
+     .eq('job_postings.company_id', company.id)
       .single()
 
     if (applicationError || !application) {
@@ -224,12 +265,13 @@ export async function PUT(request, { params }) {
   try {
     const supabase = await createClient()
 
-    const {
-      authorized,
-      status,
-      error,
-      user,
-    } = await verifyEmployer(supabase)
+  const {
+  authorized,
+  status,
+  error,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
 
     if (!authorized) {
       return NextResponse.json(
@@ -237,7 +279,19 @@ export async function PUT(request, { params }) {
         { status }
       )
     }
-
+if (
+  !['owner', 'admin', 'recruiter'].includes(
+    membership.role
+  )
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to update application statuses for this company',
+    },
+    { status: 403 }
+  )
+}
     const { applicationId } = await params
 
     if (!applicationId) {
@@ -267,21 +321,21 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const {
-      data: existingApplication,
-      error: applicationError,
-    } = await supabase
-      .from('job_applications')
-      .select(`
-        id,
-        job_id,
-        job_postings!inner (
-          employer_id
-        )
-      `)
-      .eq('id', applicationId)
-      .eq('job_postings.employer_id', user.id)
-      .single()
+const {
+  data: existingApplication,
+  error: applicationError,
+} = await supabase
+  .from('job_applications')
+  .select(`
+    id,
+    job_id,
+    job_postings!inner (
+      company_id
+    )
+  `)
+  .eq('id', applicationId)
+  .eq('job_postings.company_id', company.id)
+  .single()
 
     if (
       applicationError ||

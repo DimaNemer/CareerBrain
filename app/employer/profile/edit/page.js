@@ -11,8 +11,6 @@ const initialForm = {
   company_location: '',
   company_website: '',
   company_description: '',
-  employer_headline: '',
-  employer_experience: '',
   company_values: '',
   company_benefits: '',
 }
@@ -45,39 +43,33 @@ export default function EditEmployerProfilePage() {
           )
         }
 
-        const profile = data.profile
+       const company = data.company
 
-        setForm({
-          company_name:
-            profile.company_name || '',
+setForm({
+  company_name:
+    company.name || '',
 
-          company_size:
-            profile.company_size || '',
+  company_size:
+    company.company_size || '',
 
-          company_industry:
-            profile.company_industry || '',
+  company_industry:
+    company.industry || '',
 
-          company_location:
-            profile.company_location || '',
+  company_location:
+    company.location || '',
 
-          company_website:
-            profile.company_website || '',
+  company_website:
+    company.website || '',
 
-          company_description:
-            profile.company_description || '',
+  company_description:
+    company.description || '',
 
-          employer_headline:
-            profile.employer_headline || '',
+  company_values:
+    company.company_values || '',
 
-          employer_experience:
-            profile.employer_experience || '',
-
-          company_values:
-            profile.company_values || '',
-
-          company_benefits:
-            profile.company_benefits || '',
-        })
+  company_benefits:
+    company.company_benefits || '',
+})
       } catch (loadError) {
         console.error(
           'Employer profile load failed:',
@@ -123,14 +115,7 @@ export default function EditEmployerProfilePage() {
       return
     }
 
-    if (
-      form.employer_headline.trim().length > 200
-    ) {
-      setError(
-        'Employer headline must not exceed 200 characters'
-      )
-      return
-    }
+  
 
     if (
       form.company_description.trim().length >
@@ -142,15 +127,6 @@ export default function EditEmployerProfilePage() {
       return
     }
 
-    if (
-      form.employer_experience.trim().length >
-      5000
-    ) {
-      setError(
-        'Employer experience must not exceed 5000 characters'
-      )
-      return
-    }
 
     if (
       form.company_values.trim().length > 3000
@@ -209,11 +185,7 @@ export default function EditEmployerProfilePage() {
       company_description:
         form.company_description.trim() || null,
 
-      employer_headline:
-        form.employer_headline.trim() || null,
-
-      employer_experience:
-        form.employer_experience.trim() || null,
+     
 
       company_values:
         form.company_values.trim() || null,
@@ -442,55 +414,6 @@ export default function EditEmployerProfilePage() {
               </Field>
             </section>
 
-            <div style={dividerStyle} />
-
-            <section style={formSectionStyle}>
-              <div style={sectionHeadingRowStyle}>
-                <div>
-                  <h2 style={sectionTitleStyle}>
-                    Employer information
-                  </h2>
-
-                  <p
-                    style={sectionDescriptionStyle}
-                  >
-                    Optional professional
-                    information about the employer
-                    or company representative.
-                  </p>
-                </div>
-              </div>
-
-              <Field
-                label="Professional headline"
-                helper={`${form.employer_headline.length}/200`}
-              >
-                <input
-                  name="employer_headline"
-                  type="text"
-                  value={form.employer_headline}
-                  onChange={handleChange}
-                  maxLength={200}
-                  placeholder="e.g. Building teams that create meaningful products"
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field
-                label="Professional experience"
-                helper={`${form.employer_experience.length}/5000`}
-              >
-                <textarea
-                  name="employer_experience"
-                  value={form.employer_experience}
-                  onChange={handleChange}
-                  maxLength={5000}
-                  rows={7}
-                  placeholder="Describe your professional experience, hiring background or company leadership experience..."
-                  style={textareaStyle}
-                />
-              </Field>
-            </section>
 
             <div style={dividerStyle} />
 

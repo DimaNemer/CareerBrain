@@ -18,42 +18,37 @@ export default async function PublicCompanyProfilePage({
       : '/opportunities'
 
   const {
-    data: profile,
-    error: profileError,
-  } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      full_name,
-      username,
-      role,
-      company_name,
-      company_size,
-      company_industry,
-      company_location,
-      company_website,
-      company_description,
-      company_logo_url,
-      employer_headline,
-      employer_experience,
-      company_values,
-      company_benefits
-    `)
-    .eq('id', id)
-    .eq('role', 'employer')
-    .maybeSingle()
+  data: company,
+  error: companyError,
+} = await supabase
+  .from('companies')
+  .select(`
+    id,
+    name,
+    slug,
+    logo_url,
+    description,
+    industry,
+    company_size,
+    location,
+    website,
+    company_values,
+    company_benefits,
+    created_by
+  `)
+  .eq('id', id)
+  .maybeSingle()
 
-  if (profileError) {
-    console.error(
-      'Public company profile error:',
-      profileError.message
-    )
-  }
+if (companyError) {
+  console.error(
+    'Public company profile error:',
+    companyError.message
+  )
+}
 
-  if (!profile) {
-    notFound()
-  }
-
+if (!company) {
+  notFound()
+}
   const {
     data: jobs,
     error: jobsError,
@@ -71,7 +66,7 @@ export default async function PublicCompanyProfilePage({
       is_active,
       created_at
     `)
-    .eq('employer_id', profile.id)
+    .eq('company_id', company.id)
     .eq('is_active', true)
     .order('created_at', {
       ascending: false,
@@ -97,7 +92,7 @@ export default async function PublicCompanyProfilePage({
       created_at,
       updated_at
     `)
-    .eq('employer_id', profile.id)
+    .eq('company_id', company.id)
     .order('created_at', {
       ascending: false,
     })
@@ -109,25 +104,236 @@ export default async function PublicCompanyProfilePage({
     )
   }
 
+const {
+  data: members,
+  error: membersError,
+} = await supabase
+  .from('company_members')
+  .select(`
+    id,
+    user_id,
+    job_title,
+    role,
+    profiles (
+      id,
+      full_name,
+      username,
+      headline,
+      location
+    )
+  `)
+  .eq('company_id', company.id)
+  .eq('is_current', true)
+  .order('created_at', {
+    ascending: true,
+  })
+
+if (membersError) {
+  console.error(
+    'Public company members error:',
+    membersError.message
+  )
+}
+
+const safeMembers = membersError ? [] : members || []
+
+const ownerMembership =
+  safeMembers.find(member => member.role === 'owner') ||
+  null
+
+const ownerProfile = Array.isArray(
+  ownerMembership?.profiles
+)
+  ? ownerMembership.profiles[0]
+  : ownerMembership?.profiles
+
   const safeJobs = jobsError ? [] : jobs || []
   const safePosts = postsError ? [] : posts || []
 
-  const safeWebsite = getSafeWebsite(
-    profile.company_website
-  )
+const safeWebsite = getSafeWebsite(
+  company.website
+)
 
   const companyDisplayName =
-    profile.company_name ||
-    profile.full_name ||
-    'Company'
+  company.name || 'Company'
 
   const companyInitials = getInitials(
     companyDisplayName
   )
 
-  return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
+ return (
+  <main
+    className="public-company-page"
+    style={pageStyle}
+  >
+    <style>{`
+      @media screen and (max-width: 768px) {
+        .public-company-page {
+          padding: 24px 16px 50px !important;
+        }
+
+        /* HERO */
+
+        .public-company-hero {
+          padding: 22px !important;
+          border-radius: 20px !important;
+        }
+
+        .public-company-hero-content {
+          gap: 16px !important;
+          align-items: flex-start !important;
+        }
+
+        .public-company-logo {
+          width: 68px !important;
+          height: 68px !important;
+          border-radius: 18px !important;
+          font-size: 21px !important;
+        }
+
+        .public-company-identity {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+
+        .public-company-name {
+          font-size: 27px !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .public-company-meta {
+          gap: 7px 12px !important;
+        }
+
+        .public-company-hero-stats {
+          margin-top: 22px !important;
+        }
+
+        /* MAIN FIX */
+
+        .public-company-content-grid {
+          display: flex !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          gap: 18px !important;
+        }
+
+        .public-company-main-column,
+        .public-company-side-column {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          gap: 18px !important;
+        }
+
+        /* MAIN SECTIONS */
+
+        .public-company-section,
+        .public-company-side-card,
+        .public-company-website-card {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+          padding: 18px !important;
+          border-radius: 16px !important;
+        }
+
+        .public-company-body-text,
+        .public-company-post-content {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        /* COMPANY DETAILS */
+
+        .public-company-detail-row {
+          width: 100% !important;
+          gap: 12px !important;
+        }
+
+        .public-company-detail-label {
+          flex: 1 1 42% !important;
+          min-width: 0 !important;
+        }
+
+        .public-company-detail-value {
+          flex: 1 1 58% !important;
+          min-width: 0 !important;
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        /* OPEN POSITIONS */
+
+        .public-company-job-card {
+          padding: 14px !important;
+          gap: 12px !important;
+        }
+
+        .public-company-job-main {
+          width: 100% !important;
+          flex: 1 1 100% !important;
+          min-width: 0 !important;
+        }
+
+        .public-company-job-info {
+          flex: 1 !important;
+          min-width: 0 !important;
+        }
+
+        .public-company-job-title,
+        .public-company-job-meta {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .public-company-view-job {
+          width: 100% !important;
+          text-align: right !important;
+        }
+      }
+
+      @media screen and (max-width: 480px) {
+        .public-company-page {
+          padding: 20px 14px 40px !important;
+        }
+
+        .public-company-hero {
+          padding: 18px !important;
+        }
+
+        .public-company-logo {
+          width: 58px !important;
+          height: 58px !important;
+          border-radius: 16px !important;
+          font-size: 18px !important;
+        }
+
+        .public-company-name {
+          font-size: 24px !important;
+        }
+
+        .public-company-hero-stat {
+          padding: 12px 6px !important;
+        }
+
+        .public-company-section,
+        .public-company-side-card,
+        .public-company-website-card {
+          padding: 16px !important;
+        }
+
+        .public-company-job-icon {
+          width: 38px !important;
+          height: 38px !important;
+          border-radius: 10px !important;
+        }
+      }
+    `}</style>
+
+    <div style={containerStyle}>
         <Link
           href={backUrl}
           style={backLinkStyle}
@@ -135,57 +341,65 @@ export default async function PublicCompanyProfilePage({
           ← Back
         </Link>
 
-        <section style={heroStyle}>
+        <section
+  className="public-company-hero"
+  style={heroStyle}
+>
           <div style={heroPatternStyle} />
 
-          <div style={heroContentStyle}>
-            <div style={companyLogoStyle}>
-              {profile.company_logo_url ? (
-                <img
-                  src={profile.company_logo_url}
-                  alt={`${companyDisplayName} logo`}
-                  style={companyLogoImageStyle}
-                />
-              ) : (
-                companyInitials
-              )}
+         <div
+  className="public-company-hero-content"
+  style={heroContentStyle}
+>
+            <div
+  className="public-company-logo"
+  style={companyLogoStyle}
+>
+          {company.logo_url ? (
+  <img
+    src={company.logo_url}
+    alt={`${companyDisplayName} logo`}
+    style={companyLogoImageStyle}
+  />
+) : (
+  companyInitials
+)}
             </div>
 
-            <div style={companyIdentityStyle}>
+           <div
+  className="public-company-identity"
+  style={companyIdentityStyle}
+>
               <p style={eyebrowStyle}>
                 Company profile
               </p>
 
-              <h1 style={companyNameStyle}>
+              <h1
+  className="public-company-name"
+  style={companyNameStyle}
+>
                 {companyDisplayName}
               </h1>
 
-              {profile.employer_headline && (
-                <p style={headlineStyle}>
-                  {profile.employer_headline}
-                </p>
-              )}
+    
 
-              <div style={companyMetaStyle}>
-                {profile.company_industry && (
-                  <span>
-                    {profile.company_industry}
-                  </span>
-                )}
+              <div
+  className="public-company-meta"
+  style={companyMetaStyle}
+>
+        {company.industry && (
+  <span>{company.industry}</span>
+)}
 
-                {profile.company_location && (
-                  <span>
-                    📍 {profile.company_location}
-                  </span>
-                )}
+{company.location && (
+  <span>📍 {company.location}</span>
+)}
 
-                {profile.company_size && (
-                  <span>
-                    👥 {formatCompanySize(
-                      profile.company_size
-                    )}
-                  </span>
-                )}
+{company.company_size && (
+  <span>
+    👥 {formatCompanySize(company.company_size)}
+  </span>
+)}
               </div>
 
               {safeWebsite && (
@@ -201,63 +415,133 @@ export default async function PublicCompanyProfilePage({
             </div>
           </div>
 
-          <div style={heroStatsStyle}>
-            <HeroStat
-              label="Open jobs"
-              value={safeJobs.length}
-            />
+         <div
+  className="public-company-meta"
+  style={companyMetaStyle}
+>
+           <HeroStat
+  label="Open jobs"
+  value={safeJobs.length}
+/>
 
-            <HeroStat
-              label="Company posts"
-              value={safePosts.length}
-            />
+<HeroStat
+  label="Company posts"
+  value={safePosts.length}
+/>
 
-            <HeroStat
-              label="Industry"
-              value={
-                profile.company_industry ||
-                'Not specified'
-              }
-              last
-              small
-            />
+<HeroStat
+  label="People"
+  value={safeMembers.length}
+  last
+/>
           </div>
         </section>
 
-        <section style={contentGridStyle}>
-          <div style={mainColumnStyle}>
-            {profile.company_description && (
+        <section
+  className="public-company-content-grid"
+  style={contentGridStyle}
+>
+         <div
+  className="public-company-main-column"
+  style={mainColumnStyle}
+>
+            {company.description && (
               <Section title="About the company">
-                <p style={bodyTextStyle}>
-                  {profile.company_description}
+                <p
+  className="public-company-body-text"
+  style={bodyTextStyle}
+>
+                  {company.description}
                 </p>
               </Section>
             )}
 
-            {profile.employer_experience && (
-              <Section title="Leadership and experience">
-                <p style={bodyTextStyle}>
-                  {profile.employer_experience}
-                </p>
-              </Section>
-            )}
 
-            {profile.company_values && (
+            {company.company_values && (
               <Section title="Company values">
-                <p style={bodyTextStyle}>
-                  {profile.company_values}
+               <p
+  className="public-company-body-text"
+  style={bodyTextStyle}
+>
+                  {company.company_values}
                 </p>
               </Section>
             )}
 
-            {profile.company_benefits && (
+            {company.company_benefits && (
               <Section title="Benefits and workplace">
-                <p style={bodyTextStyle}>
-                  {profile.company_benefits}
+               <p
+  className="public-company-body-text"
+  style={bodyTextStyle}
+>
+                  {company.company_benefits}
                 </p>
               </Section>
             )}
+<Section
+  title="People"
+  count={safeMembers.length}
+>
+  {safeMembers.length === 0 ? (
+    <EmptyState
+      icon="👥"
+      message="No team members are currently listed."
+    />
+  ) : (
+    <div style={membersGridStyle}>
+      {safeMembers.map(member => {
+        const memberProfile = Array.isArray(
+          member.profiles
+        )
+          ? member.profiles[0]
+          : member.profiles
 
+        if (!memberProfile) {
+          return null
+        }
+
+        const memberName =
+          memberProfile.full_name || 'Team member'
+
+        return (
+          <Link
+            key={member.id}
+            href={`/profile/${member.user_id}?from=${encodeURIComponent(
+              `/company/${company.id}`
+            )}`}
+            style={memberCardStyle}
+          >
+            <div style={memberAvatarStyle}>
+              {getInitials(memberName)}
+            </div>
+
+            <div style={memberInfoStyle}>
+              <h3 style={memberNameStyle}>
+                {memberName}
+              </h3>
+
+              <p style={memberJobTitleStyle}>
+                {member.job_title ||
+                  memberProfile.headline ||
+                  'Team member'}
+              </p>
+
+              {memberProfile.location && (
+                <p style={memberLocationStyle}>
+                  📍 {memberProfile.location}
+                </p>
+              )}
+
+              <span style={viewProfileStyle}>
+                View profile →
+              </span>
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )}
+</Section>
             <Section
               title="Company updates"
               count={safePosts.length}
@@ -292,7 +576,10 @@ export default async function PublicCompanyProfilePage({
                         {post.title}
                       </h3>
 
-                      <p style={postContentStyle}>
+                      <p
+  className="public-company-post-content"
+  style={postContentStyle}
+>
                         {post.content}
                       </p>
 
@@ -326,21 +613,37 @@ export default async function PublicCompanyProfilePage({
                     <Link
                       key={job.id}
                       href={`/opportunities/${job.id}?from=${encodeURIComponent(
-                        `/company/${profile.id}`
+                        `/company/${company.id}`
                       )}`}
-                      style={jobCardStyle}
+                      className="public-company-job-card"
+  style={jobCardStyle}
                     >
-                      <div style={jobMainStyle}>
-                        <div style={jobIconStyle}>
+                     <div
+  className="public-company-job-main"
+  style={jobMainStyle}
+>
+                        <div
+  className="public-company-job-icon"
+  style={jobIconStyle}
+>
                           💼
                         </div>
 
-                        <div style={jobInfoStyle}>
-                          <h3 style={jobTitleStyle}>
+                        <div
+  className="public-company-job-info"
+  style={jobInfoStyle}
+>
+                          <h3
+  className="public-company-job-title"
+  style={jobTitleStyle}
+>
                             {job.title}
                           </h3>
 
-                          <p style={jobMetaStyle}>
+                          <p
+  className="public-company-job-meta"
+  style={jobMetaStyle}
+>
                             {job.location ||
                               'Location not specified'}
 
@@ -365,7 +668,10 @@ export default async function PublicCompanyProfilePage({
                         </div>
                       </div>
 
-                      <span style={viewJobStyle}>
+                      <span
+  className="public-company-view-job"
+  style={viewJobStyle}
+>
                         View job →
                       </span>
                     </Link>
@@ -375,64 +681,80 @@ export default async function PublicCompanyProfilePage({
             </Section>
           </div>
 
-          <aside style={sideColumnStyle}>
-            <section style={sideCardStyle}>
+          <aside
+  className="public-company-side-column"
+  style={sideColumnStyle}
+>
+           <section
+  className="public-company-side-card"
+  style={sideCardStyle}
+>
               <h2 style={sideTitleStyle}>
                 Company details
               </h2>
 
               <div style={detailsListStyle}>
-                <DetailRow
-                  label="Company"
-                  value={companyDisplayName}
-                />
+             <DetailRow
+  label="Company"
+  value={companyDisplayName}
+/>
 
-                <DetailRow
-                  label="Industry"
-                  value={
-                    profile.company_industry ||
-                    'Not specified'
-                  }
-                />
+<DetailRow
+  label="Industry"
+  value={
+    company.industry ||
+    'Not specified'
+  }
+/>
 
-                <DetailRow
-                  label="Company size"
-                  value={
-                    profile.company_size
-                      ? formatCompanySize(
-                          profile.company_size
-                        )
-                      : 'Not specified'
-                  }
-                />
+<DetailRow
+  label="Company size"
+  value={
+    company.company_size
+      ? formatCompanySize(
+          company.company_size
+        )
+      : 'Not specified'
+  }
+/>
 
-                <DetailRow
-                  label="Location"
-                  value={
-                    profile.company_location ||
-                    'Not specified'
-                  }
-                />
+<DetailRow
+  label="Location"
+  value={
+    company.location ||
+    'Not specified'
+  }
+/>
 
-                <DetailRow
-                  label="Representative"
-                  value={
-                    profile.full_name ||
-                    'Not specified'
-                  }
-                />
+<DetailRow
+  label="Representative"
+  value={
+    ownerProfile?.full_name ||
+    'Not specified'
+  }
+/>
 
-                {profile.username && (
-                  <DetailRow
-                    label="Username"
-                    value={`@${profile.username}`}
-                  />
-                )}
+{ownerProfile?.username && (
+  <DetailRow
+    label="Username"
+    value={`@${ownerProfile.username}`}
+  />
+)}
+
+{ownerMembership?.job_title && (
+  <DetailRow
+    label="Job title"
+    value={ownerMembership.job_title}
+  />
+)}
               </div>
             </section>
 
             {safeWebsite && (
-              <section style={websiteCardStyle}>
+              <section
+  className="public-company-website-card"
+  style={websiteCardStyle}
+>
                 <p style={websiteEyebrowStyle}>
                   Official website
                 </p>
@@ -458,8 +780,10 @@ export default async function PublicCompanyProfilePage({
                 </a>
               </section>
             )}
-
-            <section style={sideCardStyle}>
+<section
+  className="public-company-side-card"
+  style={sideCardStyle}
+>
               <h2 style={sideTitleStyle}>
                 Hiring activity
               </h2>
@@ -498,7 +822,10 @@ function Section({
   children,
 }) {
   return (
-    <section style={sectionStyle}>
+    <section
+      className="public-company-section"
+      style={sectionStyle}
+    >
       <div style={sectionHeaderStyle}>
         <h2 style={sectionTitleStyle}>
           {title}
@@ -523,14 +850,15 @@ function HeroStat({
   small = false,
 }) {
   return (
-    <div
-      style={{
-        ...heroStatStyle,
-        borderRight: last
-          ? 'none'
-          : '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
+   <div
+  className="public-company-hero-stat"
+  style={{
+    ...heroStatStyle,
+    borderRight: last
+      ? 'none'
+      : '1px solid rgba(255,255,255,0.08)',
+  }}
+>
       <p
         style={{
           ...heroStatValueStyle,
@@ -549,12 +877,21 @@ function HeroStat({
 
 function DetailRow({ label, value }) {
   return (
-    <div style={detailRowStyle}>
-      <span style={detailLabelStyle}>
+    <div
+      className="public-company-detail-row"
+      style={detailRowStyle}
+    >
+      <span
+        className="public-company-detail-label"
+        style={detailLabelStyle}
+      >
         {label}
       </span>
 
-      <span style={detailValueStyle}>
+      <span
+        className="public-company-detail-value"
+        style={detailValueStyle}
+      >
         {value}
       </span>
     </div>
@@ -1151,7 +1488,70 @@ const emptyStateStyle = {
   border: '1px dashed #D1D5DB',
   textAlign: 'center',
 }
+const membersGridStyle = {
+  display: 'grid',
+  gridTemplateColumns:
+    'repeat(auto-fit, minmax(240px, 1fr))',
+  gap: '14px',
+}
 
+const memberCardStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '14px',
+  padding: '16px',
+  borderRadius: '14px',
+  background: '#F9FAFB',
+  border: '1px solid #E5E7EB',
+  textDecoration: 'none',
+  color: '#111827',
+}
+
+const memberAvatarStyle = {
+  width: '52px',
+  height: '52px',
+  minWidth: '52px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
+  background:
+    'linear-gradient(135deg, #5B4FE8, #818CF8)',
+  color: '#FFFFFF',
+  fontSize: '16px',
+  fontWeight: 800,
+}
+
+const memberInfoStyle = {
+  minWidth: 0,
+  flex: 1,
+}
+
+const memberNameStyle = {
+  margin: '0 0 5px',
+  color: '#111827',
+  fontSize: '15px',
+  fontWeight: 700,
+}
+
+const memberJobTitleStyle = {
+  margin: '0 0 5px',
+  color: '#4B5563',
+  fontSize: '13px',
+  lineHeight: 1.4,
+}
+
+const memberLocationStyle = {
+  margin: '0 0 8px',
+  color: '#9CA3AF',
+  fontSize: '11px',
+}
+
+const viewProfileStyle = {
+  color: '#5B4FE8',
+  fontSize: '11px',
+  fontWeight: 700,
+}
 const emptyIconStyle = {
   fontSize: '27px',
   marginBottom: '9px',

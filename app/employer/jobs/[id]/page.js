@@ -141,9 +141,99 @@ export default async function EmployerJobDetailsPage({
     salaryText = `Up to ${maximumSalary}`
   }
 
-  return (
-    <main style={pageStyle}>
-      <div style={containerStyle}>
+
+   return (
+ <main
+  className="job-page"
+  style={pageStyle}
+>
+    <style>{`
+      @media (max-width: 768px) {
+        .job-details-content-grid {
+          grid-template-columns: 1fr !important;
+          gap: 20px !important;
+        }
+
+        .job-details-header {
+          flex-direction: column;
+          gap: 20px !important;
+        }
+
+        .job-details-actions {
+          width: 100%;
+        }
+
+        .job-details-actions a {
+          flex: 1;
+        }
+
+        .job-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+        }
+
+        .job-details-card {
+          padding: 20px !important;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .job-page {
+          padding: 28px 16px !important;
+        }
+
+        .job-details-heading {
+          font-size: 28px !important;
+        }
+
+        .job-details-actions {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px !important;
+        }
+
+        .job-details-actions a {
+          width: 100%;
+          padding: 0 12px !important;
+        }
+
+        .job-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          gap: 10px !important;
+        }
+
+        .job-summary-card {
+          padding: 15px !important;
+          min-width: 0;
+        }
+
+        .job-summary-value {
+          font-size: 14px !important;
+          overflow-wrap: break-word;
+        }
+
+        .job-details-card {
+          padding: 18px !important;
+          border-radius: 16px !important;
+        }
+
+        .job-content-text {
+          overflow-wrap: break-word !important;
+          word-break: normal !important;
+        }
+
+        .job-setting-row {
+          gap: 12px !important;
+        }
+
+        .job-setting-label,
+        .job-setting-value {
+          min-width: 0;
+        }
+      }
+    `}</style>
+
+    <div style={containerStyle}>
         <Link
           href="/employer/dashboard"
           style={backLinkStyle}
@@ -151,7 +241,10 @@ export default async function EmployerJobDetailsPage({
           ← Back to employer dashboard
         </Link>
 
-        <section style={headerStyle}>
+       <section
+  className="job-details-header"
+  style={headerStyle}
+>
           <div>
             <div style={statusRowStyle}>
               <span
@@ -179,7 +272,12 @@ export default async function EmployerJobDetailsPage({
               </span>
             </div>
 
-            <h1 style={headingStyle}>{job.title}</h1>
+            <h1
+  className="job-details-heading"
+  style={headingStyle}
+>
+  {job.title}
+</h1>
 
             <p style={subtitleStyle}>
               {job.company_name ||
@@ -188,7 +286,10 @@ export default async function EmployerJobDetailsPage({
             </p>
           </div>
 
-          <div style={actionsStyle}>
+         <div
+  className="job-details-actions"
+  style={actionsStyle}
+>
             <Link
               href={`/employer/jobs/${job.id}/applicants`}
               style={secondaryButtonStyle}
@@ -205,7 +306,10 @@ export default async function EmployerJobDetailsPage({
           </div>
         </section>
 
-        <section style={summaryGridStyle}>
+       <section
+  className="job-summary-grid"
+  style={summaryGridStyle}
+>
           <SummaryCard
             label="Location"
             value={
@@ -233,25 +337,40 @@ export default async function EmployerJobDetailsPage({
           />
         </section>
 
-        <section style={contentGridStyle}>
+        <section
+  className="job-details-content-grid"
+  style={contentGridStyle}
+>
           <div style={mainColumnStyle}>
-            <section style={cardStyle}>
+            <section
+  className="job-details-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Job description
               </h2>
 
-              <div style={contentTextStyle}>
+              <div
+  className="job-content-text"
+  style={contentTextStyle}
+>
                 {job.description ||
                   'No job description was provided.'}
               </div>
             </section>
 
-            <section style={cardStyle}>
+            <section
+  className="job-details-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Requirements
               </h2>
 
-              <div style={contentTextStyle}>
+             <div
+  className="job-content-text"
+  style={contentTextStyle}
+>
                 {job.requirements ||
                   'No requirements were provided.'}
               </div>
@@ -259,7 +378,10 @@ export default async function EmployerJobDetailsPage({
           </div>
 
           <aside style={sideColumnStyle}>
-            <section style={cardStyle}>
+           <section
+  className="job-details-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Application settings
               </h2>
@@ -301,7 +423,10 @@ export default async function EmployerJobDetailsPage({
               </div>
             </section>
 
-            <section style={cardStyle}>
+            <section
+  className="job-details-card"
+  style={cardStyle}
+>
               <h2 style={sectionTitleStyle}>
                 Job activity
               </h2>
@@ -331,18 +456,43 @@ export default async function EmployerJobDetailsPage({
 
 function SummaryCard({ label, value }) {
   return (
-    <div style={summaryCardStyle}>
-      <p style={summaryLabelStyle}>{label}</p>
-      <p style={summaryValueStyle}>{value}</p>
+    <div
+      className="job-summary-card"
+      style={summaryCardStyle}
+    >
+      <p style={summaryLabelStyle}>
+        {label}
+      </p>
+
+      <p
+        className="job-summary-value"
+        style={summaryValueStyle}
+      >
+        {value}
+      </p>
     </div>
   )
 }
 
 function SettingRow({ label, value }) {
   return (
-    <div style={settingRowStyle}>
-      <span style={settingLabelStyle}>{label}</span>
-      <span style={settingValueStyle}>{value}</span>
+    <div
+      className="job-setting-row"
+      style={settingRowStyle}
+    >
+      <span
+        className="job-setting-label"
+        style={settingLabelStyle}
+      >
+        {label}
+      </span>
+
+      <span
+        className="job-setting-value"
+        style={settingValueStyle}
+      >
+        {value}
+      </span>
     </div>
   )
 }

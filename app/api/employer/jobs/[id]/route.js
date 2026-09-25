@@ -5,26 +5,99 @@ const VALID_EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'internshi
 const VALID_EXPERIENCE_LEVELS = ['entry', 'junior', 'mid', 'senior', 'lead']
 
 async function verifyEmployer(supabase) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
   if (authError || !user) {
-    return { authorized: false, status: 401, error: 'Not authenticated' }
+    return {
+      authorized: false,
+      status: 401,
+      error: 'Not authenticated',
+    }
   }
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, company_name')
-    .eq('id', user.id)
-    .single()
-  if (!profile || profile.role !== 'employer') {
-    return { authorized: false, status: 403, error: 'Employer access required' }
+
+  const { data: profile, error: profileError } =
+    await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .single()
+
+  if (profileError || !profile) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Employer access required',
+    }
   }
-  return { authorized: true, user, profile }
+
+  if (profile.role !== 'employer') {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Employer access required',
+    }
+  }
+
+  const {
+    data: membership,
+    error: membershipError,
+  } = await supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  if (membershipError || !membership) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'No active company membership found',
+    }
+  }
+
+  const company = Array.isArray(membership.companies)
+    ? membership.companies[0]
+    : membership.companies
+
+  if (!company) {
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Company not found',
+    }
+  }
+
+  return {
+    authorized: true,
+    user,
+    profile,
+    membership,
+    company,
+  }
 }
 
 // ── GET /api/employer/jobs/[id] ───────────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
     const supabase = await createClient()
-    const { authorized, status, error, user } = await verifyEmployer(supabase)
+  const {
+  authorized,
+  status,
+  error,
+  company,
+} = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })
 
     const { id } = await params
@@ -33,7 +106,7 @@ export async function GET(request, { params }) {
       .from('job_postings')
       .select('*')
       .eq('id', id)
-      .eq('employer_id', user.id)
+      .eq('company_id', company.id)
       .single()
 
     if (fetchError || !job) {
@@ -50,18 +123,37 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const supabase = await createClient()
-    const { authorized, status, error, user } = await verifyEmployer(supabase)
+   const {
+  authorized,
+  status,
+  error,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })
+      if (
+  !['owner', 'admin', 'recruiter'].includes(
+    membership.role
+  )
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to edit jobs for this company',
+    },
+    { status: 403 }
+  )
+}
 
     const { id } = await params
 
     // Verify ownership first
-    const { data: existing } = await supabase
-      .from('job_postings')
-      .select('id, employer_id')
-      .eq('id', id)
-      .eq('employer_id', user.id)
-      .single()
+const { data: existing } = await supabase
+  .from('job_postings')
+  .select('id, company_id')
+  .eq('id', id)
+  .eq('company_id', company.id)
+  .single()
 
     if (!existing) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
@@ -113,8 +205,12 @@ export async function PUT(request, { params }) {
     if (experience_level !== undefined) updates.experience_level = experience_level || null
     if (description !== undefined) updates.description = description.trim()
     if (requirements !== undefined) updates.requirements = requirements?.trim() || null
-    if (salary_min !== undefined) updates.salary_min = salary_min || null
-    if (salary_max !== undefined) updates.salary_max = salary_max || null
+    if (salary_min !== undefined) 
+  updates.salary_min =
+    salary_min === null ? null : salary_min
+    if (salary_max !== undefined) 
+  updates.salary_max =
+    salary_max === null ? null : salary_max
     if (is_active !== undefined) updates.is_active = is_active
     if (require_resume !== undefined) {
   updates.require_resume = require_resume
@@ -158,7 +254,7 @@ if (share_match_score !== undefined) {
       .from('job_postings')
       .update(updates)
       .eq('id', id)
-      .eq('employer_id', user.id)
+      .eq('company_id', company.id)
       .select()
       .single()
 
@@ -176,18 +272,34 @@ if (share_match_score !== undefined) {
 export async function DELETE(request, { params }) {
   try {
     const supabase = await createClient()
-    const { authorized, status, error, user } = await verifyEmployer(supabase)
+    const {
+  authorized,
+  status,
+  error,
+  membership,
+  company,
+} = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })
-
+if (
+  !['owner', 'admin'].includes(membership.role)
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to delete jobs for this company',
+    },
+    { status: 403 }
+  )
+}
     const { id } = await params
 
     // Verify ownership before deleting
-    const { data: existing } = await supabase
-      .from('job_postings')
-      .select('id, employer_id')
-      .eq('id', id)
-      .eq('employer_id', user.id)
-      .single()
+  const { data: existing } = await supabase
+  .from('job_postings')
+  .select('id, company_id')
+  .eq('id', id)
+  .eq('company_id', company.id)
+  .single()
 
     if (!existing) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 })
@@ -197,7 +309,7 @@ export async function DELETE(request, { params }) {
       .from('job_postings')
       .delete()
       .eq('id', id)
-      .eq('employer_id', user.id)
+    .eq('company_id', company.id)
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
