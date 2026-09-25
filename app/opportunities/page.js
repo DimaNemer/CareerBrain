@@ -95,6 +95,7 @@ export default function OpportunitiesPage() {
   const LIMIT = 50
   const dropdownRef = useRef(null)
   const tabRefs = useRef({})
+  const tabsScrollRef = useRef(null)
   const sortRef = useRef(null)
 
   useEffect(() => {
@@ -155,6 +156,11 @@ export default function OpportunitiesPage() {
         const parentRect = parent.getBoundingClientRect()
         const elRect = el.getBoundingClientRect()
         setTabIndicator({ left: elRect.left - parentRect.left, width: elRect.width })
+        const scroller = tabsScrollRef.current
+        if (scroller && scroller.scrollWidth > scroller.clientWidth) {
+          const target = el.offsetLeft - (scroller.clientWidth - el.offsetWidth) / 2
+          scroller.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+        }
       }
     }
   }, [])
@@ -366,7 +372,7 @@ export default function OpportunitiesPage() {
     return (
       <article
         key={opportunity.id}
-        className={`group relative bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-6 md:p-7 transition-all duration-500 ${accentBorder} hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 hover:border-opacity-100 animate-fade-up cursor-pointer`}
+        className={`group relative bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-4 sm:p-5 md:p-7 transition-all duration-500 ${accentBorder} hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 hover:border-opacity-100 animate-fade-up cursor-pointer`}
         style={{ animationDelay: `${index * 80}ms` }}
         tabIndex={0}
         role="link"
@@ -376,10 +382,10 @@ export default function OpportunitiesPage() {
       >
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent pointer-events-none" />
         <div className="relative">
-          <div className="flex gap-4 md:gap-6 items-start mt-1">
+          <div className="flex gap-3 sm:gap-4 md:gap-6 items-start mt-1">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                <h2 className="text-xl font-bold text-slate-900 truncate tracking-tight">{opportunity.title}</h2>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-1.5">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 truncate tracking-tight">{opportunity.title}</h2>
                 {matchData && (
                   <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-50 to-orange-50 text-orange-700 border border-orange-200/60 shadow-sm">
                     <Zap className="w-3 h-3" />
@@ -492,7 +498,7 @@ export default function OpportunitiesPage() {
       `}</style>
       <Toaster position="top-center" richColors toastOptions={{ style: { borderRadius: '16px', padding: '12px 20px', fontSize: '14px' } }} />
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20 overflow-x-hidden">
         <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
           <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-indigo-200/20 to-purple-200/20 blur-3xl animate-float" />
           <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-emerald-200/20 to-teal-200/20 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
@@ -502,7 +508,7 @@ export default function OpportunitiesPage() {
         <main className="max-w-[1000px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
           <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-800 to-purple-800 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-800 to-purple-800 tracking-tight">
                 Smart Dashboard
               </h1>
               <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
@@ -531,7 +537,7 @@ export default function OpportunitiesPage() {
 
           <div className="relative z-20 mb-6 p-4 md:p-5 rounded-3xl bg-white/60 backdrop-blur-xl border border-white/80 shadow-lg shadow-indigo-500/5 overflow-visible">
             <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
-              <div ref={dropdownRef} className="flex flex-col gap-1 relative">
+              <div ref={dropdownRef} className="flex flex-col gap-1 relative min-w-0">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="location-label">Location</label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
@@ -611,7 +617,8 @@ export default function OpportunitiesPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-1 mb-6 relative bg-white/40 backdrop-blur-sm rounded-2xl p-1.5 border border-slate-200/60 shadow-sm w-fit">
+          <div ref={tabsScrollRef} className="mb-6 -mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto no-scrollbar">
+            <div className="relative flex items-center gap-1 w-max bg-white/40 backdrop-blur-sm rounded-2xl p-1.5 border border-slate-200/60 shadow-sm">
             <div className="absolute bottom-1.5 top-1.5 transition-all duration-300 ease-out bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl shadow-md"
               style={{ left: tabIndicator.left, width: tabIndicator.width }} />
             {tabs.map(tab => {
@@ -624,11 +631,11 @@ export default function OpportunitiesPage() {
                   role="tab"
                   aria-selected={isActive}
                   aria-label={`${tab.label}${tab.id === 'recommendations' && recsTopPicks.length > 0 ? `, ${recsTopPicks.length} picks` : ''}`}
-                  className={`relative z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-none cursor-pointer transition-all duration-200 whitespace-nowrap ${
+                  className={`relative z-10 flex shrink-0 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border-none cursor-pointer transition-all duration-200 whitespace-nowrap ${
                     isActive ? 'text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/50'
                   } ${isRecs && isActive ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent' : ''}`}
                   style={isActive ? { color: 'white' } : {}}>
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : ''}`} />
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : ''}`} />
                   {tab.label}
                   {tab.id === 'recommendations' && !loadingRecs && recsTopPicks.length > 0 && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/20 text-white" aria-label={`${recsTopPicks.length} recommendations`}>{recsTopPicks.length}</span>
@@ -640,19 +647,20 @@ export default function OpportunitiesPage() {
               role="tab"
               aria-selected={showSavedOnly}
               aria-label={`Saved jobs${savedJobIds.size > 0 ? `, ${savedJobIds.size} saved` : ''}`}
-              className={`relative z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-none cursor-pointer transition-all duration-200 ml-2 ${
+              className={`relative z-10 flex shrink-0 items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border-none cursor-pointer transition-all duration-200 ml-2 ${
                 showSavedOnly ? 'bg-rose-50 text-rose-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
               }`}>
-              <Heart className={`w-4 h-4 ${showSavedOnly ? 'fill-rose-500 text-rose-500' : ''}`} />
+              <Heart className={`w-4 h-4 shrink-0 ${showSavedOnly ? 'fill-rose-500 text-rose-500' : ''}`} />
               Saved
               {savedJobIds.size > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600">{savedJobIds.size}</span>}
             </button>
+            </div>
           </div>
 
           {loading && (
             <div className="grid gap-5" aria-label="Loading opportunities">
               {[1,2,3].map(i => (
-                <div key={i} className="bg-white/60 backdrop-blur-sm border border-slate-200/60 rounded-3xl p-7 overflow-hidden animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
+                <div key={i} className="bg-white/60 backdrop-blur-sm border border-slate-200/60 rounded-3xl p-4 sm:p-7 overflow-hidden animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
                   <div className="flex justify-between">
                     <div className="space-y-3 flex-1">
                       <div className="h-6 w-3/5 rounded-xl bg-slate-200/60 relative overflow-hidden"><div className="absolute inset-0 animate-shimmer" /></div>
@@ -681,7 +689,7 @@ export default function OpportunitiesPage() {
           )}
 
           {!loading && !error && activeTab !== 'recommendations' && sortedJobs.length === 0 && (
-            <div className="bg-white/40 backdrop-blur-sm border-2 border-dashed border-slate-200/60 rounded-3xl p-16 text-center shadow-sm">
+            <div className="bg-white/40 backdrop-blur-sm border-2 border-dashed border-slate-200/60 rounded-3xl p-8 sm:p-16 text-center shadow-sm">
               <Target className="w-14 h-14 mx-auto text-slate-300 mb-4" />
               <p className="text-slate-500 text-sm font-medium">No matches found. Adjust filters or sync new jobs.</p>
             </div>
@@ -713,7 +721,7 @@ export default function OpportunitiesPage() {
               {loadingRecs && (
                 <div className="grid gap-5" aria-label="Loading recommendations">
                   {[1,2,3].map(i => (
-                    <div key={i} className="bg-white/60 backdrop-blur-sm border border-slate-200/60 rounded-3xl p-7 overflow-hidden animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
+                    <div key={i} className="bg-white/60 backdrop-blur-sm border border-slate-200/60 rounded-3xl p-4 sm:p-7 overflow-hidden animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
                       <div className="flex justify-between">
                         <div className="space-y-3 flex-1">
                           <div className="h-6 w-3/5 rounded-xl bg-slate-200/60 relative overflow-hidden"><div className="absolute inset-0 animate-shimmer" /></div>
@@ -731,7 +739,7 @@ export default function OpportunitiesPage() {
               )}
 
               {!loadingRecs && recsTopPicks.length === 0 && (
-                <div className="bg-white/40 backdrop-blur-sm border-2 border-dashed border-slate-200/60 rounded-3xl p-16 text-center shadow-sm animate-fade-up">
+                <div className="bg-white/40 backdrop-blur-sm border-2 border-dashed border-slate-200/60 rounded-3xl p-8 sm:p-16 text-center shadow-sm animate-fade-up">
                   <Sparkles className="w-14 h-14 mx-auto text-slate-300 mb-4" />
                   <p className="text-slate-500 text-sm font-medium">No recommendations yet. Hit <strong>Match</strong> above to calculate your scores.</p>
                 </div>
@@ -758,4 +766,3 @@ export default function OpportunitiesPage() {
     </>
   )
 }
-2
