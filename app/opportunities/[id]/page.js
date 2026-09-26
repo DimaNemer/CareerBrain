@@ -40,11 +40,20 @@ export default function OpportunityDetailPage() {
   useEffect(() => {
     async function load() {
       try {
-       const res = await fetch(`/api/jobs/${params.id}`)
+        const res = await fetch(`/api/jobs/${params.id}`)
         if (res.status === 401) { router.push('/login'); return }
-        if (!res.ok) throw new Error('Opportunity not found')
-        const data = await res.json()
-        setOpportunity(data.job)
+        if (res.ok) {
+          const data = await res.json()
+          setOpportunity(data.job)
+          return
+        }
+        if (res.status !== 404) throw new Error('Opportunity not found')
+
+        const fallback = await fetch(`/api/opportunities/${params.id}`)
+        if (fallback.status === 401) { router.push('/login'); return }
+        if (!fallback.ok) throw new Error('Opportunity not found')
+        const data = await fallback.json()
+        setOpportunity(data.opportunity)
       } catch (err) { setError(err.message) }
       finally { setLoading(false) }
     }
@@ -167,17 +176,17 @@ const requirementsList =
   return (
     <>
       <Toaster position="top-center" richColors />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20 overflow-x-hidden">
         <main className="max-w-[800px] mx-auto px-4 md:px-6 py-8 md:py-12">
           <Link href="/opportunities" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 font-medium mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </Link>
 
-          <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-lg">
-            <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-4 sm:p-5 md:p-8 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap mb-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">{opportunity.title}</h1>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap mb-2">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 tracking-tight break-words">{opportunity.title}</h1>
                   {matchData && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-50 to-orange-50 text-orange-700 border border-orange-200/60 shadow-sm">
                       <Zap className="w-3 h-3" />{score}% Match
@@ -197,20 +206,20 @@ const requirementsList =
                   {opportunity.opportunity_type && <><span className="text-slate-300">·</span><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{opportunity.opportunity_type}</span></>}
                 </p>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-3 sm:shrink-0 self-end sm:self-auto">
                 <button onClick={toggleBookmark} aria-label={saved ? 'Unsave job' : 'Save job'}
                   className="bg-transparent border-none cursor-pointer p-2 rounded-xl hover:bg-slate-100/80 transition-all duration-300">
-                  <Heart className={`w-6 h-6 transition-all duration-300 ${saved ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' : 'text-slate-400 hover:text-rose-400 hover:scale-110'}`} />
+                  <Heart className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ${saved ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' : 'text-slate-400 hover:text-rose-400 hover:scale-110'}`} />
                 </button>
                 {matchData && (
-                  <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: 96, height: 96 }} role="img" aria-label={`Match score: ${score} percent, ${scoreLabel}`}>
-                    <svg width={96} height={96} className="transform -rotate-90">
+                  <div className="relative inline-flex items-center justify-center shrink-0 w-20 h-20 sm:w-24 sm:h-24" role="img" aria-label={`Match score: ${score} percent, ${scoreLabel}`}>
+                    <svg viewBox="0 0 96 96" className="w-full h-full transform -rotate-90">
                       <circle cx={48} cy={48} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={6} />
                       <circle cx={48} cy={48} r={radius} fill="none" stroke={scoreColor} strokeWidth={6}
                         strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
                         className="transition-all duration-1000 ease-out" />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-lg font-bold" style={{ color: scoreColor }}>{score}%</span>
+                    <span className="absolute inset-0 flex items-center justify-center text-base sm:text-lg font-bold" style={{ color: scoreColor }}>{score}%</span>
                   </div>
                 )}
               </div>
@@ -219,7 +228,7 @@ const requirementsList =
             {opportunity.description && (
               <div className="mb-6">
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">Description</h2>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{opportunity.description}</p>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">{opportunity.description}</p>
               </div>
             )}
             {opportunity.is_employer_job && (
@@ -298,7 +307,7 @@ const requirementsList =
         ))}
       </ul>
     ) : (
-      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+      <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">
         {opportunity.requirements}
       </p>
     )}
@@ -343,8 +352,8 @@ const requirementsList =
 
 
 
-            <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-100/80">
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-slate-100/80">
+              <div className="flex gap-2 min-w-0">
                 {opportunity.opportunity_type && (
                   <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">{opportunity.opportunity_type}</span>
                 )}
@@ -355,7 +364,7 @@ const requirementsList =
                 {opportunity.is_employer_job ? (
   <button
     onClick={() => router.push(`/opportunities/${params.id}/apply`)}
-    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white"
+    className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white"
     aria-label="Apply to this position"
   >
     <span>Apply Now</span>
@@ -364,7 +373,7 @@ const requirementsList =
 ) : safeApplyUrl ? (
   <button
     onClick={(e) => handleApply(e, safeApplyUrl)}
-    className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer ${
+    className={`inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer ${
       applied
         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100'
         : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white'

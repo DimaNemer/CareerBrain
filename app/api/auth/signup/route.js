@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-import { rateLimit } from '@/lib/rate-limit'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { createServiceClient } from '@/lib/supabase-service'
 const VALID_ROLES = ['job_seeker', 'employer']
 
@@ -33,11 +33,7 @@ function isValidWebsite(value) {
 export async function POST(request) {
   try {
     // Rate limit: maximum 5 signup attempts per IP per hour.
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    const ip =
-      forwardedFor?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown'
+    const ip = getClientIp(request)
 
     const { limited } = rateLimit(
       `signup:${ip}`,
