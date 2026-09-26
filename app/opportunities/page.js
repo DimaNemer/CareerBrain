@@ -372,7 +372,7 @@ export default function OpportunitiesPage() {
     return (
       <article
         key={opportunity.id}
-        className={`group relative bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-4 sm:p-5 md:p-7 transition-all duration-500 ${accentBorder} hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 hover:border-opacity-100 animate-fade-up cursor-pointer`}
+        className={`group relative min-w-0 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-3xl p-4 sm:p-5 md:p-7 transition-all duration-500 ${accentBorder} hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 hover:border-opacity-100 animate-fade-up cursor-pointer`}
         style={{ animationDelay: `${index * 80}ms` }}
         tabIndex={0}
         role="link"
