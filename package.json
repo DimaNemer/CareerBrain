@@ -22,12 +22,12 @@
     "lucide-react": "^1.25.0",
     "next": "16.2.9",
     "openai": "^6.45.0",
-    "pdf-parse": "^2.4.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.17.2",
     "sharp": "^0.35.3",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -35,6 +35,7 @@ export async function GET(request, { params }) {
 .select(`
   id,
   employer_id,
+  company_id,
   title,
   company_name,
   location,
@@ -99,7 +100,7 @@ export async function GET(request, { params }) {
       company: job.company_name,
       company_name: job.company_name,
       location: job.location,
-
+company_id: job.company_id,
       // Keep this name because the opportunities page expects it
       opportunity_type: job.employment_type,
       employment_type: job.employment_type,

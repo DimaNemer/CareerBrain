@@ -191,10 +191,11 @@ export async function GET(request) {
       let employerQuery = supabase
         .from('job_postings')
         .select(`
-          id,
-          employer_id,
-          title,
-          company_name,
+  id,
+  employer_id,
+  company_id,
+  title,
+  company_name,
           location,
           employment_type,
           experience_level,
@@ -266,10 +267,11 @@ export async function GET(request) {
        * by app/opportunities/page.js.
        */
       employerJobs = (employerJobRows || []).map(
-        job => ({
-          id: job.id,
-          employer_id: job.employer_id,
-          title: job.title,
+       job => ({
+  id: job.id,
+  employer_id: job.employer_id,
+  company_id: job.company_id,
+  title: job.title,
           company:
             job.company_name || 'Company',
           location: job.location,

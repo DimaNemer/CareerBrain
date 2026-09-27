@@ -15,50 +15,77 @@ export default async function EmployerJobDetailsPage({
     redirect('/login')
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role, company_name')
-      .eq('id', user.id)
-      .single()
+const {
+  data: membership,
+  error: membershipError,
+} = await supabase
+  .from('company_members')
+  .select(`
+    company_id,
+    role,
+    job_title,
+    companies (
+      id,
+      name
+    )
+  `)
+  .eq('user_id', user.id)
+  .eq('is_current', true)
+  .maybeSingle()
 
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
-    redirect('/dashboard')
-  }
+if (membershipError || !membership) {
+  redirect('/dashboard')
+}
 
+const company = Array.isArray(
+  membership.companies
+)
+  ? membership.companies[0]
+  : membership.companies
+
+if (!company) {
+  redirect('/dashboard')
+}
+
+const canManageJobs = [
+  'owner',
+  'admin',
+  'recruiter',
+].includes(membership.role)
+
+const canViewApplicants = [
+  'owner',
+  'admin',
+  'recruiter',
+].includes(membership.role)
   const { id } = await params
 
   const { data: job, error: jobError } =
-    await supabase
-      .from('job_postings')
-      .select(`
-        id,
-        employer_id,
-        title,
-        company_name,
-        location,
-        employment_type,
-        experience_level,
-        description,
-        requirements,
-        salary_min,
-        salary_max,
-        is_active,
-        require_resume,
-        cover_letter_requirement,
-        share_profile,
-        share_match_score,
-        created_at,
-        updated_at
-      `)
-      .eq('id', id)
-      .eq('employer_id', user.id)
-      .single()
-
+  await supabase
+    .from('job_postings')
+    .select(`
+      id,
+      company_id,
+      title,
+      company_name,
+      location,
+      employment_type,
+      experience_level,
+      description,
+      requirements,
+      salary_min,
+      salary_max,
+      is_active,
+      require_resume,
+      cover_letter_requirement,
+      share_profile,
+      share_match_score,
+      created_at,
+      updated_at
+    `)
+    .eq('id', id)
+    .eq('company_id', company.id)
+    .single()
   if (jobError || !job) {
     notFound()
   }
@@ -281,29 +308,33 @@ export default async function EmployerJobDetailsPage({
 
             <p style={subtitleStyle}>
               {job.company_name ||
-                profile.company_name ||
-                'Your company'}
+  company.name ||
+  'Your company'}
             </p>
           </div>
 
-         <div
-  className="job-details-actions"
-  style={actionsStyle}
->
-            <Link
-              href={`/employer/jobs/${job.id}/applicants`}
-              style={secondaryButtonStyle}
-            >
-              View applicants
-            </Link>
+         {canManageJobs && (
+  <div
+    className="job-details-actions"
+    style={actionsStyle}
+  >
+    {canViewApplicants && (
+      <Link
+        href={`/employer/jobs/${job.id}/applicants`}
+        style={secondaryButtonStyle}
+      >
+        View applicants
+      </Link>
+    )}
 
-            <Link
-              href={`/employer/jobs/${job.id}/edit`}
-              style={primaryButtonStyle}
-            >
-              Edit job
-            </Link>
-          </div>
+    <Link
+      href={`/employer/jobs/${job.id}/edit`}
+      style={primaryButtonStyle}
+    >
+      Edit job
+    </Link>
+  </div>
+)}
         </section>
 
        <section
