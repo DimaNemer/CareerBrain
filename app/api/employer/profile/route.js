@@ -75,11 +75,10 @@ async function verifyEmployer(supabase) {
   .eq('id', user.id)
   .single()
 
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
+if (
+  profileError ||
+  !profile
+) {
     return {
       authorized: false,
       status: 403,

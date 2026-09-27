@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase-service'
+import { createClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
@@ -6,7 +7,8 @@ export default async function PublicCompanyProfilePage({
   params,
   searchParams,
 }) {
-  const supabase = createServiceClient()
+const publicSupabase = createServiceClient()
+const supabase = await createClient()
 
   const { id } = await params
   const resolvedSearchParams = await searchParams
@@ -20,7 +22,7 @@ export default async function PublicCompanyProfilePage({
   const {
   data: company,
   error: companyError,
-} = await supabase
+} = await publicSupabase
   .from('companies')
   .select(`
     id,
@@ -49,10 +51,29 @@ if (companyError) {
 if (!company) {
   notFound()
 }
+const {
+  data: { user: viewer },
+} = await supabase.auth.getUser()
+
+let canEditCompany = false
+
+if (viewer) {
+  const { data: viewerMembership } = await publicSupabase
+    .from('company_members')
+    .select('role')
+    .eq('company_id', company.id)
+    .eq('user_id', viewer.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  canEditCompany =
+    viewerMembership?.role === 'owner' ||
+    viewerMembership?.role === 'admin'
+}
   const {
     data: jobs,
     error: jobsError,
-  } = await supabase
+  } = await publicSupabase
     .from('job_postings')
     .select(`
       id,
@@ -82,7 +103,7 @@ if (!company) {
   const {
     data: posts,
     error: postsError,
-  } = await supabase
+  } = await publicSupabase
     .from('company_posts')
     .select(`
       id,
@@ -107,7 +128,7 @@ if (!company) {
 const {
   data: members,
   error: membersError,
-} = await supabase
+} = await publicSupabase
   .from('company_members')
   .select(`
     id,
@@ -401,17 +422,51 @@ const safeWebsite = getSafeWebsite(
   </span>
 )}
               </div>
+<div
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginTop: '17px',
+  }}
+>
+  {safeWebsite && (
+    <a
+      href={safeWebsite}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...websiteLinkStyle,
+        marginTop: 0,
+      }}
+    >
+      Visit company website ↗
+    </a>
+  )}
 
-              {safeWebsite && (
-                <a
-                  href={safeWebsite}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={websiteLinkStyle}
-                >
-                  Visit company website ↗
-                </a>
-              )}
+  {canEditCompany && (
+    <Link
+      href="/employer/profile/edit"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '9px 14px',
+        borderRadius: '9px',
+        background: '#FFFFFF',
+        color: '#3730A3',
+        textDecoration: 'none',
+        fontSize: '12px',
+        fontWeight: 700,
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+      }}
+    >
+      Edit company
+    </Link>
+  )}
+</div>
             </div>
           </div>
 

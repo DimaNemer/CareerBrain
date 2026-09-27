@@ -73,7 +73,39 @@ export default async function DashboardPage() {
   } catch {
     profile = null
   }
+// ---- Active company membership ----
 
+let companyMembership = null
+
+try {
+  const { data } = await supabase
+    .from("company_members")
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name,
+        logo_url,
+        industry,
+        location
+      )
+    `)
+    .eq("user_id", user.id)
+    .eq("is_current", true)
+    .maybeSingle()
+
+  companyMembership = data
+} catch {
+  companyMembership = null
+}
+
+const workspaceCompany = Array.isArray(
+  companyMembership?.companies
+)
+  ? companyMembership.companies[0]
+  : companyMembership?.companies
   const firstName = profile?.full_name?.trim().split(" ")[0] || user.email?.split("@")[0] || "there"
   const userSkills = profile?.user_skills || []
   const verifiedSkills = userSkills.filter((s) => s.source === "Project").length
@@ -236,37 +268,102 @@ export default async function DashboardPage() {
           </section>
         </div>
 
-        {/* Sidebar */}
-        <aside className="flex flex-col gap-5">
-          {/* Profile progress */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="font-heading text-lg font-bold text-card-foreground">Career profile progress</h2>
-            <p className="mb-4 mt-1 text-sm text-muted-foreground">
-              {completedActions} of {profileActions.length} recommended steps completed
-            </p>
-            <div className="mb-5 h-2 overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
-            </div>
-            <div className="flex flex-col gap-3">
-              {profileActions.map((action) => (
-                <div key={action.title} className="flex items-start gap-2">
-                  {action.completed ? (
-                    <CheckCircle2 className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                  ) : (
-                    <Circle className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
-                  )}
-                  <span
-                    className={`text-xs leading-relaxed ${
-                      action.completed ? "text-card-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {action.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </aside>
+   {/* Sidebar */}
+<aside className="flex flex-col gap-5">
+
+  {/* Company workspace */}
+  {companyMembership && workspaceCompany && (
+    <section className="rounded-2xl border border-primary/20 bg-card p-6 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        {workspaceCompany.logo_url ? (
+          <img
+            src={workspaceCompany.logo_url}
+            alt={workspaceCompany.name}
+            className="size-12 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Briefcase className="size-5" />
+          </div>
+        )}
+
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Company workspace
+          </p>
+
+          <h2 className="truncate font-heading text-base font-bold text-card-foreground">
+            {workspaceCompany.name}
+          </h2>
+        </div>
+      </div>
+
+      {companyMembership.job_title && (
+        <p className="mb-1 text-sm font-semibold text-card-foreground">
+          {companyMembership.job_title}
+        </p>
+      )}
+
+      <p className="mb-4 text-xs text-muted-foreground">
+        Company access:{" "}
+        <span className="font-semibold capitalize text-card-foreground">
+          {companyMembership.role}
+        </span>
+      </p>
+
+      <Link
+        href="/employer/dashboard"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90"
+      >
+        Open company workspace
+        <ArrowRight className="size-4" />
+      </Link>
+    </section>
+  )}
+
+  {/* Profile progress */}
+  <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <h2 className="font-heading text-lg font-bold text-card-foreground">
+      Career profile progress
+    </h2>
+
+    <p className="mb-4 mt-1 text-sm text-muted-foreground">
+      {completedActions} of {profileActions.length} recommended steps completed
+    </p>
+
+    <div className="mb-5 h-2 overflow-hidden rounded-full bg-secondary">
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${progressPct}%` }}
+      />
+    </div>
+
+    <div className="flex flex-col gap-3">
+      {profileActions.map((action) => (
+        <div
+          key={action.title}
+          className="flex items-start gap-2"
+        >
+          {action.completed ? (
+            <CheckCircle2 className="mt-0.5 size-4 flex-shrink-0 text-primary" />
+          ) : (
+            <Circle className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
+          )}
+
+          <span
+            className={`text-xs leading-relaxed ${
+              action.completed
+                ? "text-card-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            {action.title}
+          </span>
+        </div>
+      ))}
+    </div>
+  </section>
+</aside>
       </div>
     </main>
   )

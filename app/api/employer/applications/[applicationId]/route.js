@@ -23,25 +23,6 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .single()
-
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
   const {
     data: membership,
     error: membershipError,
@@ -68,7 +49,9 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const company = Array.isArray(membership.companies)
+  const company = Array.isArray(
+    membership.companies
+  )
     ? membership.companies[0]
     : membership.companies
 
@@ -83,12 +66,10 @@ async function verifyEmployer(supabase) {
   return {
     authorized: true,
     user,
-    profile,
     membership,
     company,
   }
 }
-
 // GET /api/employer/applications/[applicationId]
 export async function GET(request, { params }) {
   try {
@@ -108,7 +89,19 @@ export async function GET(request, { params }) {
         { status }
       )
     }
-
+if (
+  !['owner', 'admin', 'recruiter'].includes(
+    membership.role
+  )
+) {
+  return NextResponse.json(
+    {
+      error:
+        'You do not have permission to view applications for this company',
+    },
+    { status: 403 }
+  )
+}
     const { applicationId } = await params
 
     if (!applicationId) {

@@ -16,20 +16,6 @@ export default async function JobApplicantsPage({
     redirect('/login')
   }
 
-const { data: profile, error: profileError } =
-  await supabase
-    .from('profiles')
-    .select('id, role')
-    .eq('id', user.id)
-    .single()
-
-if (
-  profileError ||
-  !profile ||
-  profile.role !== 'employer'
-) {
-  redirect('/dashboard')
-}
 
 const {
   data: membership,
@@ -60,7 +46,15 @@ const company = Array.isArray(membership.companies)
 if (!company) {
   redirect('/employer/dashboard')
 }
+const canManageApplicants = [
+  'owner',
+  'admin',
+  'recruiter',
+].includes(membership.role)
 
+if (!canManageApplicants) {
+  redirect('/employer/dashboard')
+}
 const { id } = await params
 
 const { data: job, error: jobError } =

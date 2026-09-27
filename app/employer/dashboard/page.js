@@ -27,9 +27,7 @@ export default async function EmployerDashboardPage() {
     redirect('/dashboard')
   }
 
-  if (profile.role !== 'employer') {
-    redirect('/dashboard')
-  }
+ 
 
   const {
   data: membership,
@@ -71,7 +69,19 @@ const company = Array.isArray(membership.companies)
   if (!company) {
   redirect('/dashboard')
 }
+const companyRole = membership.role
 
+const canManageTeam =
+  companyRole === 'owner' ||
+  companyRole === 'admin'
+
+const canManageJobs =
+  companyRole === 'owner' ||
+  companyRole === 'admin' ||
+  companyRole === 'recruiter'
+
+const isReadOnly =
+  companyRole === 'viewer'
   const { data: jobs, error: jobsError } = await supabase
     .from('job_postings')
     .select('id, title, location, employment_type, is_active, created_at')
@@ -84,9 +94,9 @@ const company = Array.isArray(membership.companies)
   const activeJobs = safeJobs.filter(job => job.is_active).length
   const inactiveJobs = safeJobs.filter(job => !job.is_active).length
 
- const firstName =
+const firstName =
   profile.full_name?.trim().split(' ')[0] ||
-  'Employer'
+  'Member'
 
   return (
     <main
@@ -116,7 +126,7 @@ const company = Array.isArray(membership.companies)
                 fontSize: '14px',
               }}
             >
-              Employer Dashboard
+              Company Workspace
             </p>
 
             <h1
@@ -136,8 +146,9 @@ const company = Array.isArray(membership.companies)
                 fontSize: '15px',
               }}
             >
-            Manage job opportunities for{' '}
-{company.name || 'your company'}.
+           {isReadOnly
+  ? `View your workspace at ${company.name}.`
+  : `Manage your workspace at ${company.name}.`}
             </p>
           </div>
 
@@ -188,7 +199,27 @@ const company = Array.isArray(membership.companies)
   >
     View company
   </Link>
-
+{canManageTeam && (
+  <Link
+    href="/employer/team"
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '13px 18px',
+      borderRadius: '12px',
+      background: 'rgba(255,255,255,0.05)',
+      border:
+        '1px solid rgba(255,255,255,0.10)',
+      color: '#fff',
+      textDecoration: 'none',
+      fontWeight: 700,
+    }}
+  >
+    Manage team
+  </Link>
+)}
+  {canManageJobs && (
   <Link
     href="/employer/jobs/new"
     className="employer-create-job"
@@ -209,6 +240,7 @@ const company = Array.isArray(membership.companies)
   >
     + Create job
   </Link>
+)}
 </div>
         </section>
 
@@ -275,88 +307,91 @@ const company = Array.isArray(membership.companies)
                 You have not created any jobs yet.
               </p>
 
-              <Link
-                href="/employer/jobs/new"
-                style={{
-                  color: '#818CF8',
-                  textDecoration: 'none',
-                  fontWeight: 700,
-                }}
-              >
-                Create your first job
-              </Link>
+             {canManageJobs && (
+  <Link
+    href="/employer/jobs/new"
+    style={{
+      color: '#818CF8',
+      textDecoration: 'none',
+      fontWeight: 700,
+    }}
+  >
+    Create your first job
+  </Link>
+)}
             </div>
           ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              {safeJobs.map(job => (
-             <Link
-  key={job.id}
-  href={`/employer/jobs/${job.id}`}
+        <div
   style={{
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '16px',
-    padding: '16px',
-    borderRadius: '14px',
-    background: 'rgba(255,255,255,0.035)',
-    border: '1px solid rgba(255,255,255,0.07)',
-    flexWrap: 'wrap',
-    textDecoration: 'none',
-    color: '#fff',
-    cursor: 'pointer',
+    flexDirection: 'column',
+    gap: '12px',
   }}
 >
-                  <div>
-                    <h3
-                      style={{
-                        margin: '0 0 6px',
-                        fontSize: '16px',
-                      }}
-                    >
-                      {job.title}
-                    </h3>
+  {safeJobs.map(job => (
+    <Link
+      key={job.id}
+      href={`/employer/jobs/${job.id}`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        padding: '18px',
+        borderRadius: '14px',
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        textDecoration: 'none',
+        color: '#fff',
+      }}
+    >
+      <div>
+        <h3
+          style={{
+            margin: '0 0 7px',
+            fontSize: '16px',
+            fontWeight: 600,
+          }}
+        >
+          {job.title}
+        </h3>
 
-                    <p
-                      style={{
-                        margin: 0,
-                        color: 'rgba(255,255,255,0.45)',
-                        fontSize: '13px',
-                      }}
-                    >
-                      {job.location || 'Location not specified'}
-                      {job.employment_type
-                        ? ` · ${job.employment_type}`
-                        : ''}
-                    </p>
-                  </div>
+        <p
+          style={{
+            margin: 0,
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '13px',
+          }}
+        >
+          {job.location || 'Location not specified'}
+          {' · '}
+          {job.employment_type || 'Not specified'}
+        </p>
+      </div>
 
-                  <span
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: '999px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: job.is_active ? '#6EE7B7' : '#FCA5A5',
-                      background: job.is_active
-                        ? 'rgba(16,185,129,0.12)'
-                        : 'rgba(239,68,68,0.12)',
-                      border: job.is_active
-                        ? '1px solid rgba(16,185,129,0.22)'
-                        : '1px solid rgba(239,68,68,0.22)',
-                    }}
-                  >
-                    {job.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </Link>
-              ))}
-            </div>
+      <span
+        style={{
+          padding: '7px 12px',
+          borderRadius: '999px',
+          background: job.is_active
+            ? 'rgba(16,185,129,0.14)'
+            : 'rgba(148,163,184,0.12)',
+          border: job.is_active
+            ? '1px solid rgba(16,185,129,0.28)'
+            : '1px solid rgba(148,163,184,0.20)',
+          color: job.is_active
+            ? '#6EE7B7'
+            : '#CBD5E1',
+          fontSize: '12px',
+          fontWeight: 700,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {job.is_active ? 'Active' : 'Inactive'}
+      </span>
+    </Link>
+  ))}
+</div>
           )}
         </section>
       </div>

@@ -34,29 +34,6 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .single()
-
-  if (profileError || !profile) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
-  if (profile.role !== 'employer') {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
   const {
     data: membership,
     error: membershipError,
@@ -79,11 +56,14 @@ async function verifyEmployer(supabase) {
     return {
       authorized: false,
       status: 403,
-      error: 'No active company membership found',
+      error:
+        'No active company membership found',
     }
   }
 
-  const company = Array.isArray(membership.companies)
+  const company = Array.isArray(
+    membership.companies
+  )
     ? membership.companies[0]
     : membership.companies
 
@@ -98,7 +78,6 @@ async function verifyEmployer(supabase) {
   return {
     authorized: true,
     user,
-    profile,
     membership,
     company,
   }
@@ -108,10 +87,11 @@ async function verifyEmployer(supabase) {
 export async function GET(request) {
   try {
     const supabase = await createClient()
-    const {
+   const {
   authorized,
   status,
   error,
+  membership,
   company,
 } = await verifyEmployer(supabase)
     if (!authorized) return NextResponse.json({ error }, { status })

@@ -87,6 +87,7 @@ if (experienceError) {
   )
 }
   const { data: { user: viewer } } = await supabase.auth.getUser()
+  const isOwnProfile = viewer?.id === id
 
   if (viewer && viewer.id !== id) {
     sendProfileViewNotification({ profileOwnerId: id, viewerId: viewer.id })
@@ -383,6 +384,37 @@ const { data: posts } = await supabase
                   </a>
                 )}
               </div>
+              {isOwnProfile && (
+  <div
+    style={{
+      marginTop: '18px',
+      display: 'flex',
+      gap: '10px',
+      flexWrap: 'wrap',
+    }}
+  >
+    <Link
+      href="/profile/edit"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '10px 16px',
+        borderRadius: '10px',
+        background: '#FFFFFF',
+        color: '#3730A3',
+        textDecoration: 'none',
+        fontSize: '13px',
+        fontWeight: 700,
+        border: '1px solid rgba(255,255,255,0.7)',
+        boxShadow:
+          '0 4px 12px rgba(0,0,0,0.12)',
+      }}
+    >
+      Edit profile
+    </Link>
+  </div>
+)}
             </div>
           </div>
 

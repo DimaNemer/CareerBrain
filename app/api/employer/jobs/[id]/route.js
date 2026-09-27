@@ -18,29 +18,6 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .single()
-
-  if (profileError || !profile) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
-  if (profile.role !== 'employer') {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
   const {
     data: membership,
     error: membershipError,
@@ -67,7 +44,9 @@ async function verifyEmployer(supabase) {
     }
   }
 
-  const company = Array.isArray(membership.companies)
+  const company = Array.isArray(
+    membership.companies
+  )
     ? membership.companies[0]
     : membership.companies
 
@@ -82,7 +61,6 @@ async function verifyEmployer(supabase) {
   return {
     authorized: true,
     user,
-    profile,
     membership,
     company,
   }

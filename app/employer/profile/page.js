@@ -23,18 +23,12 @@ const {
     id,
     full_name,
     username,
-    role
   `)
   .eq('id', user.id)
   .single()
-
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
-    redirect('/dashboard')
-  }
+if (profileError || !profile) {
+  redirect('/dashboard')
+}
 const {
   data: membership,
   error: membershipError,
@@ -73,6 +67,17 @@ const company = Array.isArray(membership.companies)
 if (!company) {
   redirect('/employer/dashboard')
 }
+const canManageCompany = [
+  'owner',
+  'admin',
+].includes(membership.role)
+
+const canManageJobs = [
+  'owner',
+  'admin',
+  'recruiter',
+].includes(membership.role)
+
   const {
     data: jobs,
     error: jobsError,
@@ -412,13 +417,16 @@ const companyInitials =
     View company
   </Link>
 
+  {canManageCompany && (
   <Link
     href="/employer/profile/edit"
     style={secondaryButtonStyle}
   >
     Edit company
   </Link>
+)}
 
+  {canManageJobs && (
   <Link
     href="/employer/jobs/new"
     style={primaryButtonStyle}
@@ -426,6 +434,7 @@ const companyInitials =
   >
     + Create job
   </Link>
+)}
 </div>
         </div>
 
@@ -593,16 +602,19 @@ const companyInitials =
                   </h3>
 
                   <p style={emptyTextStyle}>
-                    Create your first job to start
-                    receiving applications.
+                   {canManageJobs
+  ? 'Create your first job to start receiving applications.'
+  : 'No jobs have been posted by this company yet.'}.
                   </p>
 
-                  <Link
-                    href="/employer/jobs/new"
-                    style={emptyButtonStyle}
-                  >
-                    Create a job
-                  </Link>
+                  {canManageJobs && (
+  <Link
+    href="/employer/jobs/new"
+    style={emptyButtonStyle}
+  >
+    Create a job
+  </Link>
+)}
                 </div>
               ) : (
                 <div style={jobsListStyle}>

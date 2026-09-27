@@ -167,10 +167,10 @@ export async function POST(request, { params }) {
   error: jobError,
 } = await supabase
   .from('job_postings')
-  .select(`
-    id,
-    employer_id,
-    title,
+ .select(`
+  id,
+  company_id,
+  title,
     company_name,
     is_active,
     require_resume,
@@ -206,20 +206,47 @@ export async function POST(request, { params }) {
       )
     }
 
-    /*
-     * Prevent an employer from applying to their own job.
-     * The role check already blocks employers, but this is an
-     * additional ownership protection.
-     */
-    if (job.employer_id === user.id) {
-      return NextResponse.json(
-        {
-          error:
-            'You cannot apply to your own job posting',
-        },
-        { status: 403 }
-      )
-    }
+  /*
+ * Prevent a current member of the company
+ * from applying to that company's own job.
+ */
+if (job.company_id) {
+  const {
+    data: companyMembership,
+    error: membershipError,
+  } = await supabase
+    .from('company_members')
+    .select('id')
+    .eq('company_id', job.company_id)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle()
+
+  if (membershipError) {
+    console.error(
+      'Company membership check failed:',
+      membershipError.message
+    )
+
+    return NextResponse.json(
+      {
+        error:
+          'Unable to verify company membership',
+      },
+      { status: 500 }
+    )
+  }
+
+  if (companyMembership) {
+    return NextResponse.json(
+      {
+        error:
+          'You cannot apply to a job posted by your own company',
+      },
+      { status: 403 }
+    )
+  }
+}
 
     let body
 
