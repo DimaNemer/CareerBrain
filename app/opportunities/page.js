@@ -325,16 +325,26 @@ export default function OpportunitiesPage() {
     { value: 'score', label: 'Match Score' },
   ]
 
+  const readSyncResponse = async (res) => {
+    const isJson = res.headers?.get('content-type')?.includes('application/json')
+    if (!isJson) return null
+    try {
+      return await res.json()
+    } catch {
+      return null
+    }
+  }
+
   const syncApi = async (endpoint, label) => {
     if (syncing) return
     setSyncing(true)
     try {
       await fetch('/api/opportunities/sync/embed', { method: 'POST' })
       const res = await fetch(endpoint, { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Sync failed')
+      const data = await readSyncResponse(res)
+      if (!res.ok) throw new Error(data?.error || `Sync failed (status ${res.status})`)
       await fetch('/api/match', { method: 'POST' })
-      toast.success(data.message || `${label} synced!`)
+      toast.success(data?.message || `${label} synced!`)
       await loadOpportunities(false)
     } catch (err) { toast.error(`Sync Error: ${err.message}`) }
     finally { setSyncing(false) }
@@ -346,7 +356,18 @@ export default function OpportunitiesPage() {
     setSyncing(true)
     try {
       await fetch('/api/opportunities/sync/embed', { method: 'POST' })
-      await Promise.all([fetch('/api/opportunities/sync', { method: 'POST' }), fetch('/api/opportunities/sync/remotive', { method: 'POST' })])
+      const responses = await Promise.all([
+        fetch('/api/opportunities/sync', { method: 'POST' }),
+        fetch('/api/opportunities/sync/remotive', { method: 'POST' }),
+      ])
+      const errors = []
+      for (const res of responses) {
+        if (!res.ok) {
+          const data = await readSyncResponse(res)
+          errors.push(data?.error || `Sync failed (status ${res.status})`)
+        }
+      }
+      if (errors.length > 0) throw new Error(errors.join('; '))
       await fetch('/api/match', { method: 'POST' })
       toast.success('All sources synced!')
       await loadOpportunities(false)
