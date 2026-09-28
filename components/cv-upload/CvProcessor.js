@@ -1,23 +1,41 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { theme } from '@/constants/colors'
 import Link from 'next/link'
 
 const STEPS = [
-  { id: 'upload', label: 'Uploading CV' },
-  { id: 'extract_text', label: 'Extracting text from PDF' },
-  { id: 'ai_analyze', label: 'AI analyzing CV and experiences' },
-  { id: 'sync_skills', label: 'Extracting and categorizing skills' },
-  { id: 'completed', label: 'Updating profile' }
+  {
+    id: 'upload',
+    label: 'Uploading CV',
+    processingStep: 'Uploading CV',
+  },
+  {
+    id: 'extract_text',
+    label: 'Extracting text from PDF',
+    processingStep: 'Extracting text',
+  },
+  {
+    id: 'ai_analyze',
+    label: 'AI analyzing CV and experiences',
+    processingStep: 'AI analyzing CV',
+  },
+  {
+    id: 'sync_skills',
+    label: 'Extracting and categorizing skills',
+    processingStep: 'Syncing skills',
+  },
+  {
+    id: 'update_profile',
+    label: 'Updating profile',
+    processingStep: 'Updating profile',
+  },
 ]
 
 const activeProcessingUploads = new Set()
 
 export default function CvProcessor({ uploadId }) {
-  const router = useRouter()
   const supabase = createClient()
   const hasStarted = useRef(false)
   const startTime = useRef(Date.now())
@@ -72,89 +90,162 @@ export default function CvProcessor({ uploadId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, uploadId])
 
-  async function processCv() {
-    try {
-      const response = await fetch('/api/cv-extract', {
+ async function processCv() {
+  try {
+    const response = await fetch(
+      '/api/cv-extract',
+      {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploadId })
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        setExtractedData(result.data)
-
-        setDuration(((Date.now() - startTime.current) / 1000).toFixed(1))
-        setStatus('Completed')
-        setCurrentStep('Completed')
-      } else {
-        const errText = await response.text()
-        let parsedErr = 'Unexpected server error'
-        try {
-          parsedErr = JSON.parse(errText).error
-        } catch (_) {
-          parsedErr = errText
-        }
-        throw new Error(parsedErr)
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          uploadId,
+        }),
       }
-    } catch (err) {
-      console.error('Error during CV processing:', err)
-      setErrorMessage(err.message || 'Processing failed')
-      setStatus('Failed')
+    )
+
+    const result = await response
+      .json()
+      .catch(() => ({}))
+
+    if (!response.ok) {
+      if (result.failedStep) {
+        setCurrentStep(
+          result.failedStep
+        )
+      }
+
+      throw new Error(
+        result.error ||
+          'Unexpected server error'
+      )
     }
+
+    setExtractedData(
+      result.data
+    )
+
+    setDuration(
+      (
+        (Date.now() -
+          startTime.current) /
+        1000
+      ).toFixed(1)
+    )
+
+    setCurrentStep('Completed')
+    setStatus('Completed')
+  } catch (err) {
+    console.error(
+      'Error during CV processing:',
+      err
+    )
+
+    setErrorMessage(
+      err instanceof Error
+        ? err.message
+        : 'Processing failed'
+    )
+
+    setStatus('Failed')
+  } finally {
+    activeProcessingUploads.delete(
+      uploadId
+    )
+  }
+}
+const handleRetry = async () => {
+  setStatus('Processing')
+  setCurrentStep('Extracting text')
+  setErrorMessage('')
+  setExtractedData(null)
+
+  startTime.current = Date.now()
+
+  activeProcessingUploads.delete(
+    uploadId
+  )
+
+  const {
+    error: resetError,
+  } = await supabase
+    .from('cv_uploads')
+    .update({
+      status: 'Processing',
+      processing_step:
+        'Extracting text',
+      error_message: null,
+    })
+    .eq('id', uploadId)
+
+  if (resetError) {
+    console.error(
+      'Failed to reset CV processing:',
+      resetError
+    )
+
+    setErrorMessage(
+      'Unable to retry CV processing.'
+    )
+
+    setStatus('Failed')
+
+    return
   }
 
-  const handleRetry = async () => {
-    activeProcessingUploads.delete(uploadId)
-    hasStarted.current = false
-    setStatus('Processing')
-    setCurrentStep('Extracting text')
-    setErrorMessage('')
-    startTime.current = Date.now()
-
-    // Reset status in DB to Processing
-    await supabase
-      .from('cv_uploads')
-      .update({ status: 'Processing', processing_step: 'Extracting text', error_message: null })
-      .eq('id', uploadId)
-
-    // Re-trigger extraction
-    processCv()
-  }
+  processCv()
+}
 
   // Map database processing step to visual steps
-  const getStepStatus = (stepId) => {
-    if (status === 'Failed') {
-      const activeStepIndex = STEPS.findIndex(s => getStepMapping(s.id) === currentStep)
-      const currentStepIndex = STEPS.findIndex(s => s.id === stepId)
-      if (currentStepIndex === activeStepIndex) return 'failed'
-      if (currentStepIndex < activeStepIndex) return 'success'
-      return 'pending'
+const getStepStatus = stepId => {
+  const currentIndex =
+    STEPS.findIndex(
+      step =>
+        step.processingStep ===
+        currentStep
+    )
+
+  const stepIndex =
+    STEPS.findIndex(
+      step => step.id === stepId
+    )
+
+  /*
+   * The CV has already been uploaded before
+   * this processing component starts.
+   */
+  if (stepId === 'upload') {
+    return 'success'
+  }
+
+  if (status === 'Completed') {
+    return 'success'
+  }
+
+  if (status === 'Failed') {
+    if (stepIndex === currentIndex) {
+      return 'failed'
     }
 
-    if (status === 'Completed') return 'success'
+    if (stepIndex < currentIndex) {
+      return 'success'
+    }
 
-    const activeStepIndex = STEPS.findIndex(s => getStepMapping(s.id) === currentStep)
-    const currentStepIndex = STEPS.findIndex(s => s.id === stepId)
-
-    if (currentStepIndex < activeStepIndex) return 'success'
-    if (currentStepIndex === activeStepIndex) return 'active'
     return 'pending'
   }
 
-  const getStepMapping = (stepId) => {
-    const map = {
-      upload: 'Uploading CV',
-      extract_text: 'Extracting text',
-      ai_analyze: 'AI analyzing CV',
-      sync_skills: 'Syncing skills',
-      completed: 'Updating profile'
-    }
-    if (stepId === 'completed' && (currentStep === 'Calculating readiness score' || currentStep === 'Updating profile' || currentStep === 'Completed')) {
-      return currentStep
-    }
-    return map[stepId] || ''
+  if (stepIndex < currentIndex) {
+    return 'success'
   }
+
+  if (stepIndex === currentIndex) {
+    return 'active'
+  }
+
+  return 'pending'
+}
 
   // Helpers for score color
   const getScoreColor = (s) => {

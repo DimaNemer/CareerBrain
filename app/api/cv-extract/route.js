@@ -1,165 +1,409 @@
-import { createClient } from '@/lib/supabase-server';
-import { extractTextFromPdf } from '@/lib/pdf-parser';
-import { extractCvData } from '@/lib/ai';
-import { syncGlobalSkills, syncUserSkills } from '@/lib/skills';
-import { updateReadinessScore } from '@/lib/scoring';
-import { NextResponse } from 'next/server';
-import { CV_STORAGE_BUCKET } from '@/lib/cv-upload';
+import { createClient } from '@/lib/supabase-server'
+import { extractTextFromPdf } from '@/lib/pdf-parser'
+import { extractCvData } from '@/lib/ai'
+import {
+  syncGlobalSkills,
+  syncUserSkills,
+} from '@/lib/skills'
+import { updateReadinessScore } from '@/lib/scoring'
+import { NextResponse } from 'next/server'
+import {
+  CV_STORAGE_BUCKET,
+} from '@/lib/cv-upload'
 
 export async function POST(request) {
-  const supabase = await createClient();
-  let upload = null;
+  const supabase = await createClient()
+
+  let upload = null
+  let currentStep = 'Starting'
 
   try {
-    // Get authenticated user from request cookies
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // --------------------------------------------------
+    // 1. Authenticate user
+    // --------------------------------------------------
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json(
+        {
+          error: 'Not authenticated',
+        },
+        {
+          status: 401,
+        }
+      )
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { uploadId } = body;
+    // --------------------------------------------------
+    // 2. Read request body
+    // --------------------------------------------------
+    const body = await request
+      .json()
+      .catch(() => ({}))
 
-    // Get specific or latest pending CV upload for the user
+    const { uploadId } = body
+
+    // --------------------------------------------------
+    // 3. Load requested CV upload
+    // --------------------------------------------------
     if (uploadId) {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from('cv_uploads')
         .select('*')
         .eq('id', uploadId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle()
+
       if (!error && data) {
-        upload = data;
+        upload = data
       }
     }
 
+    // If no explicit upload was found,
+    // load the latest processing upload.
     if (!upload) {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from('cv_uploads')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'Processing')
-        .order('uploaded_at', { ascending: false })
+        .order('uploaded_at', {
+          ascending: false,
+        })
         .limit(1)
-        .single();
+        .maybeSingle()
+
       if (!error && data) {
-        upload = data;
+        upload = data
       }
     }
 
     if (!upload) {
-      return NextResponse.json({ error: 'No pending CV upload found.' }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            'No pending CV upload found.',
+        },
+        {
+          status: 404,
+        }
+      )
     }
 
-    // Update step: Download PDF and Extract text
+    // --------------------------------------------------
+    // 4. Extract PDF text
+    // --------------------------------------------------
+    currentStep = 'Extracting text'
+
     await supabase
       .from('cv_uploads')
-      .update({ processing_step: 'Extracting text' })
-      .eq('id', upload.id);
+      .update({
+        processing_step: currentStep,
+        error_message: null,
+      })
+      .eq('id', upload.id)
 
-    // Download the PDF from Supabase Storage
-    const storagePath = upload.file_url.includes(`${CV_STORAGE_BUCKET}/`)
-      ? upload.file_url.split(`${CV_STORAGE_BUCKET}/`).pop()
-      : upload.file_url;
+    const storagePath =
+      upload.file_url.includes(
+        `${CV_STORAGE_BUCKET}/`
+      )
+        ? upload.file_url
+            .split(
+              `${CV_STORAGE_BUCKET}/`
+            )
+            .pop()
+        : upload.file_url
 
-    const { data: fileData, error: downloadError } = await supabase.storage
+    if (!storagePath) {
+      throw new Error(
+        'Invalid CV storage path.'
+      )
+    }
+
+    const {
+      data: fileData,
+      error: downloadError,
+    } = await supabase.storage
       .from(CV_STORAGE_BUCKET)
-      .download(storagePath);
+      .download(storagePath)
 
     if (downloadError || !fileData) {
-      console.error('Storage download error:', downloadError);
-      throw new Error(`Failed to download the CV file from storage: ${downloadError?.message || 'File missing'}`);
+      console.error(
+        'Storage download error:',
+        downloadError
+      )
+
+      throw new Error(
+        `Failed to download the CV file from storage: ${
+          downloadError?.message ||
+          'File missing'
+        }`
+      )
     }
 
-    // Convert Blob to Buffer
-    const arrayBuffer = await fileData.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const arrayBuffer =
+      await fileData.arrayBuffer()
 
-    // Extract text from PDF
-    const text = await extractTextFromPdf(buffer);
-    if (!text || text.trim().length === 0) {
-      throw new Error('Could not extract text from this PDF. Please make sure the uploaded file is a PDF with selectable text (not an image scan).');
+    const buffer =
+      Buffer.from(arrayBuffer)
+
+    const text =
+      await extractTextFromPdf(buffer)
+
+    if (
+      !text ||
+      text.trim().length === 0
+    ) {
+      throw new Error(
+        'Could not extract text from this PDF. Please make sure the uploaded file is a PDF with selectable text and not an image-only scan.'
+      )
     }
 
-    // Update step: AI analyzing CV
+    // --------------------------------------------------
+    // 5. Analyze CV using Gemini
+    // --------------------------------------------------
+    currentStep = 'AI analyzing CV'
+
     await supabase
       .from('cv_uploads')
-      .update({ processing_step: 'AI analyzing CV' })
-      .eq('id', upload.id);
+      .update({
+        processing_step: currentStep,
+      })
+      .eq('id', upload.id)
 
-    // Call LLM to parse CV data
-    const cvData = await extractCvData(text);
-    if (!cvData || (typeof cvData !== 'object')) {
-      throw new Error('AI analysis failed or returned invalid response format.');
+    const cvData =
+      await extractCvData(text)
+
+    if (
+      !cvData ||
+      typeof cvData !== 'object' ||
+      Array.isArray(cvData)
+    ) {
+      throw new Error(
+        'AI analysis failed or returned an invalid response format.'
+      )
     }
 
-    // Update step: Syncing skills
+    // --------------------------------------------------
+    // 6. Sync skills
+    // --------------------------------------------------
+    currentStep = 'Syncing skills'
+
     await supabase
       .from('cv_uploads')
-      .update({ processing_step: 'Syncing skills' })
-      .eq('id', upload.id);
+      .update({
+        processing_step: currentStep,
+      })
+      .eq('id', upload.id)
 
-    // Sync skills using structured format
-    const combinedSkills = [];
-    if (cvData.skills && Array.isArray(cvData.skills)) {
-      const seen = new Set();
-      cvData.skills.forEach(s => {
-        if (s.name) {
-          const normName = s.name.trim().toLowerCase();
-          if (!seen.has(normName)) {
-            seen.add(normName);
-            combinedSkills.push({
-              name: s.name.trim(),
-              category: s.category || 'Other relevant professional skills',
-              proficiency: s.proficiency || 'Beginner',
-              proficiencyScore: Number(s.proficiencyScore) || 25,
-              evidence: s.evidence || ''
-            });
-          }
+    const combinedSkills = []
+
+    if (
+      Array.isArray(cvData.skills)
+    ) {
+      const seen = new Set()
+
+      cvData.skills.forEach(skill => {
+        if (
+          !skill ||
+          typeof skill.name !== 'string'
+        ) {
+          return
         }
-      });
+
+        const cleanedName =
+          skill.name.trim()
+
+        if (!cleanedName) {
+          return
+        }
+
+        const normalizedName =
+          cleanedName.toLowerCase()
+
+        if (
+          seen.has(normalizedName)
+        ) {
+          return
+        }
+
+        seen.add(normalizedName)
+
+        combinedSkills.push({
+          name: cleanedName,
+
+          category:
+            skill.category ||
+            'Other relevant professional skills',
+
+          proficiency:
+            skill.proficiency ||
+            'Beginner',
+
+          proficiencyScore:
+            Number(
+              skill.proficiencyScore
+            ) || 25,
+
+          evidence:
+            skill.evidence || '',
+        })
+      })
     }
 
-    // Clean up previous CV skills to allow correct re-uploads without duplicates
-    const { error: deleteError } = await supabase
+    // Remove old CV-derived skills
+    const {
+      error: deleteError,
+    } = await supabase
       .from('user_skills')
       .delete()
       .eq('user_id', user.id)
-      .eq('source', 'CV');
+      .eq('source', 'CV')
 
     if (deleteError) {
-      throw new Error(`Failed to clean previous CV skills: ${deleteError.message}`);
+      throw new Error(
+        `Failed to clean previous CV skills: ${deleteError.message}`
+      )
     }
 
-    const resolvedGlobalSkills = await syncGlobalSkills(combinedSkills);
-    await syncUserSkills(user.id, resolvedGlobalSkills, combinedSkills, 'CV');
+    const resolvedGlobalSkills =
+      await syncGlobalSkills(
+        combinedSkills
+      )
 
-    // Update step: Updating profile
+    await syncUserSkills(
+      user.id,
+      resolvedGlobalSkills,
+      combinedSkills,
+      'CV'
+    )
+
+    // --------------------------------------------------
+    // 7. Update profile
+    // --------------------------------------------------
+    currentStep =
+      'Updating profile'
+
     await supabase
       .from('cv_uploads')
-      .update({ processing_step: 'Updating profile' })
-      .eq('id', upload.id);
+      .update({
+        processing_step:
+          currentStep,
+      })
+      .eq('id', upload.id)
 
-    // Recalculate and update the user's readiness score in public.profiles table
-    await updateReadinessScore(supabase, user.id);
+    await updateReadinessScore(
+      supabase,
+      user.id
+    )
 
-    // Update CV upload status to Completed
-    await supabase
+    // --------------------------------------------------
+    // 8. Complete upload
+    // --------------------------------------------------
+    currentStep = 'Completed'
+
+    const {
+      error: completionError,
+    } = await supabase
       .from('cv_uploads')
-      .update({ status: 'Completed', extracted_data: cvData, processing_step: 'Completed' })
-      .eq('id', upload.id);
+      .update({
+        status: 'Completed',
+        processing_step:
+          'Completed',
+        extracted_data: cvData,
+        error_message: null,
+      })
+      .eq('id', upload.id)
 
-    return NextResponse.json({ success: true, data: cvData }, { status: 200 });
-  } catch (err) {
-    console.error('CV Extraction Error:', err);
-    
-    if (upload && upload.id) {
-      await supabase
+    if (completionError) {
+      throw new Error(
+        `Failed to finalize CV processing: ${completionError.message}`
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: cvData,
+      },
+      {
+        status: 200,
+      }
+    )
+  } catch (error) {
+    console.error(
+      'CV Extraction Error:',
+      error
+    )
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Processing failed'
+
+    // Detect temporary Gemini/API
+    // availability errors.
+    const temporaryAiFailure =
+      message.includes(
+        'AI CV analysis is temporarily unavailable'
+      ) ||
+      message.includes('HTTP 429') ||
+      message.includes('HTTP 500') ||
+      message.includes('HTTP 502') ||
+      message.includes('HTTP 503') ||
+      message.includes('HTTP 504')
+
+    const publicMessage =
+      temporaryAiFailure
+        ? 'AI CV analysis is temporarily unavailable. Please try again shortly.'
+        : message
+
+    if (upload?.id) {
+      const {
+        error: failureUpdateError,
+      } = await supabase
         .from('cv_uploads')
-        .update({ status: 'Failed', error_message: err.message || 'Processing failed' })
-        .eq('id', upload.id);
+        .update({
+          status: 'Failed',
+
+          // Keep the exact stage where
+          // the failure happened.
+          processing_step:
+            currentStep,
+
+          error_message:
+            publicMessage,
+        })
+        .eq('id', upload.id)
+
+      if (failureUpdateError) {
+        console.error(
+          'Failed to save CV processing error:',
+          failureUpdateError.message
+        )
+      }
     }
 
-    return NextResponse.json({ error: err.message || 'Processing failed' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: publicMessage,
+        failedStep: currentStep,
+      },
+      {
+        status:
+          temporaryAiFailure
+            ? 503
+            : 500,
+      }
+    )
   }
 }
