@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# local embedding model (fetched by scripts/download-embed-model.mjs)
+/models/
+
 # production
 /build
 
