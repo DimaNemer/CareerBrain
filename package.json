@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/download-embed-model.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "download:model": "node scripts/download-embed-model.mjs",
     "seed:skills": "node scripts/seed-master-skills.mjs",
     "worker": "node workers/notification-worker.cjs"
   },
