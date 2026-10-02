@@ -332,6 +332,7 @@ export default function ChatPanel({ projectId, currentUserId }) {
             rows={1}
             style={{
               flex: 1,
+              minWidth: 0,
               padding: '10px 14px',
               background: theme.bg.secondary,
               border: `1px solid ${theme.border.light}`,

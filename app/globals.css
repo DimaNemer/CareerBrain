@@ -38,6 +38,137 @@ video {
   height: auto;
 }
 
+/* Scroll containers that should scroll without a visible bar */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Notification bell.
+ * The trigger had a 36px hit area and the 380px panel was anchored to a bell
+ * that sits ~64px from the right edge on phones, so the panel hung off the
+ * left of the screen.
+ *
+ * The bell icon keeps its own width/height attributes on purpose. Sizing it
+ * from CSS alone leaves the svg with no intrinsic size, so it collapses to
+ * 0x0 and the icon disappears whenever this stylesheet is missing or stale.
+ */
+.notification-trigger {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: 480px;
+  /* dvh tracks the visible area on mobile, so the panel can't run past the
+     bottom of the screen and get cut off mid-message. */
+  max-height: min(480px, calc(100dvh - 88px));
+}
+
+@media (max-width: 767px) {
+  /* Anchor to the viewport (the nav is sticky and 60px tall) so the panel
+     always stays inside the screen. */
+  .notification-dropdown {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 84px);
+    max-height: calc(100dvh - 84px);
+  }
+}
+
+/*
+ * Project workspace.
+ * Geometry lives here rather than inline so the fixed-width desktop grids can
+ * collapse on phones; colours stay inline with the theme tokens.
+ */
+.ws-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+.ws-card {
+  padding: 16px;
+}
+
+.ws-tabs {
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+
+.ws-tasks-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ws-overview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.ws-chat-slot {
+  height: 440px;
+}
+
+.ws-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .ws-shell {
+    padding: 28px 24px;
+  }
+
+  .ws-card {
+    padding: 24px;
+  }
+
+  .ws-tabs {
+    overflow-x: visible;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ws-tasks-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+  }
+
+  .ws-overview-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ws-chat-slot {
+    height: 580px;
+    position: sticky;
+    top: 80px;
+  }
+
+  .ws-board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /* Animated orbs for auth pages */
 .orb {
   position: absolute;
@@ -128,4 +259,87 @@ video {
   --input: #E9E4F5;
   --ring: #4C1D95;
   --radius: 0.625rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark-themed dropdowns
+
+   A native <select> in a dark UI has two independent problems:
+
+   1. The closed control is drawn by the OS/browser as a native widget, so it
+      does not match the custom text inputs beside it.
+   2. The OPEN list is drawn by the operating system and inherits nothing from
+      our styles, so it renders as a white list with dark text on Windows.
+
+   Fixing the appearance alone still leaves the popup unreadable, and fixing
+   the popup alone still leaves the control looking out of place. Both are
+   needed. See lib/form-controls.js for the equivalent inline-style helper.
+   --------------------------------------------------------------------------- */
+.app-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* Tells the browser to paint the OS-drawn option popup dark. */
+  color-scheme: dark;
+  cursor: pointer;
+  /* Reserve room for the custom chevron so long options are not clipped. */
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2394A3B8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+/* Fallback for engines that ignore color-scheme on the popup. */
+.app-select option {
+  background-color: #131A2E;
+  color: #ffffff;
+}
+
+.app-select:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.65);
+  outline-offset: 1px;
+}
+
+.app-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   Light-themed dropdowns
+
+   The mirror of .app-select, for controls on white/slate-50 panels (the
+   opportunities filters, project forms, and the job seeker profile). Same
+   chevron geometry and focus ring so the two variants read as one control,
+   but a dark-grey chevron and `color-scheme: light` so the OS-drawn option
+   popup stays light.
+
+   Without `color-scheme` here, Windows paints the popup with its own default
+   and the control looks like an unstyled native dropdown.
+   --------------------------------------------------------------------------- */
+.app-select-light {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color-scheme: light;
+  cursor: pointer;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2364748B' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.app-select-light option {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.app-select-light:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 1px;
+}
+
+.app-select-light:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

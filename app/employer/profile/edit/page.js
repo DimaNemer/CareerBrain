@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { darkSelectStyle } from '@/lib/form-controls'
 
 const initialForm = {
   company_name: '',
@@ -331,7 +332,8 @@ setForm({
                     name="company_size"
                     value={form.company_size}
                     onChange={handleChange}
-                    style={selectStyle}
+                  className="app-select"
+                style={selectStyle}
                   >
                     <option value="">
                       Select company size
@@ -657,10 +659,9 @@ const inputStyle = {
 }
 
 const selectStyle = {
-  ...inputStyle,
-  cursor: 'pointer',
-  colorScheme: 'dark',
-}
+    ...inputStyle,
+    ...darkSelectStyle(),
+  }
 
 const textareaStyle = {
   ...inputStyle,

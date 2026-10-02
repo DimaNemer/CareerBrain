@@ -60,4 +60,9 @@ ersBadihOneDriveDesktopWebsiteProjectCareerBrainappopportunitiespage*
 !.env.example
 
 .env.example
-supabase/
+
+# Supabase: keep the directory ignored by default, but DO track migrations.
+# Without this, schema changes (company_invites, the accept_company_invite RPC,
+# the last-owner trigger) never reach the deployed app and the team APIs break.
+supabase/*
+!supabase/migrations/

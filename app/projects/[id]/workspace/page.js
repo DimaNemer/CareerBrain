@@ -122,7 +122,7 @@ const enrichedTeamMembers = [
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
   return (
-    <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '28px 24px' }}>
+    <main className="ws-shell">
 
       {/* Header */}
       <div style={{
@@ -133,11 +133,11 @@ const enrichedTeamMembers = [
         gap: '16px',
         flexWrap: 'wrap',
       }}>
-        <div>
+        <div style={{ minWidth: 0, flex: '1 1 200px' }}>
           <Link href={`/projects/${projectId}`} style={{ fontSize: '13px', color: theme.text.secondary, textDecoration: 'none', display: 'block', marginBottom: '8px' }}>
             ← Back to project
           </Link>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: theme.text.primary, margin: '0 0 8px', letterSpacing: '-0.3px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: theme.text.primary, margin: '0 0 8px', letterSpacing: '-0.3px', overflowWrap: 'anywhere' }}>
             {project.title}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -157,7 +157,7 @@ const enrichedTeamMembers = [
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {isOwner && !isCompleted && !completionRequest && (
             <MarkCompleteButton projectId={projectId} />
           )}
@@ -286,8 +286,8 @@ const enrichedTeamMembers = [
       {/* Tab content */}
       <div style={{ marginTop: '24px' }}>
         {activeTab === 'tasks' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', alignItems: 'start' }}>
-            <div style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px', padding: '24px' }}>
+          <div className="ws-tasks-layout">
+            <div className="ws-card" style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px' }}>
               <TaskBoard
                 tasks={tasks || []}
                 projectId={projectId}
@@ -296,7 +296,7 @@ const enrichedTeamMembers = [
                 teamMembers={enrichedTeamMembers}
               />
             </div>
-            <div style={{ height: '580px', position: 'sticky', top: '80px' }}>
+            <div className="ws-chat-slot">
               <ChatPanel
                 projectId={projectId}
                 currentUserId={user.id}
@@ -309,7 +309,7 @@ const enrichedTeamMembers = [
         )}
 
         {activeTab === 'files' && (
-          <div style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px', padding: '24px' }}>
+          <div className="ws-card" style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px' }}>
             <FilePanel
               projectId={projectId}
               currentUserId={user.id}
@@ -319,7 +319,7 @@ const enrichedTeamMembers = [
         )}
 
         {activeTab === 'meetings' && (
-          <div style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px', padding: '24px' }}>
+          <div className="ws-card" style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px' }}>
             <MeetingsPanel
               projectId={projectId}
               currentUserId={user.id}
@@ -329,11 +329,11 @@ const enrichedTeamMembers = [
         )}
 
         {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="ws-overview-layout">
             {/* Project info */}
-            <div style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px', padding: '24px' }}>
+            <div className="ws-card" style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 600, color: theme.text.primary, margin: '0 0 16px' }}>Project info</h3>
-              <p style={{ fontSize: '14px', color: theme.text.secondary, lineHeight: 1.7, margin: '0 0 20px' }}>
+              <p style={{ fontSize: '14px', color: theme.text.secondary, lineHeight: 1.7, margin: '0 0 20px', overflowWrap: 'anywhere' }}>
                 {project.description || 'No description added.'}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -347,7 +347,7 @@ const enrichedTeamMembers = [
             </div>
 
             {/* Recent activity */}
-            <div style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px', padding: '24px' }}>
+            <div className="ws-card" style={{ background: theme.bg.card, border: `1px solid ${theme.border.light}`, borderRadius: '16px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 600, color: theme.text.primary, margin: '0 0 16px' }}>Team</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {enrichedTeamMembers.map((tm, i) => (
@@ -360,7 +360,7 @@ const enrichedTeamMembers = [
                     }}>
                       {tm.profiles?.full_name?.[0]?.toUpperCase()}
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '14px', fontWeight: 500, color: theme.text.primary }}>
                         {tm.profiles?.full_name}
                       </div>
@@ -369,7 +369,7 @@ const enrichedTeamMembers = [
                       </div>
                     </div>
                     {tasks?.filter(t => t.assigned_to === tm.profiles?.id).length > 0 && (
-                      <div style={{ marginLeft: 'auto', fontSize: '12px', color: theme.text.tertiary }}>
+                      <div style={{ marginLeft: 'auto', fontSize: '12px', color: theme.text.tertiary, flexShrink: 0 }}>
                         {tasks.filter(t => t.assigned_to === tm.profiles?.id).length} tasks
                       </div>
                     )}
@@ -386,9 +386,9 @@ const enrichedTeamMembers = [
 
 function StatRow({ label, value }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${theme.border.light}` }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: `1px solid ${theme.border.light}` }}>
       <span style={{ fontSize: '13px', color: theme.text.secondary }}>{label}</span>
-      <span style={{ fontSize: '13px', fontWeight: 500, color: theme.text.primary }}>{value}</span>
+      <span style={{ fontSize: '13px', fontWeight: 500, color: theme.text.primary, textAlign: 'right' }}>{value}</span>
     </div>
   )
 }

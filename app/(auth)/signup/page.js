@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { darkSelectStyle } from '@/lib/form-controls'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -401,13 +402,13 @@ if (form.role === 'employer' && form.company_website.trim()) {
         <label style={labelStyle}>Company size</label>
 
         <select
+          className="app-select"
           name="company_size"
           value={form.company_size}
           onChange={handleChange}
           style={{
             ...inputStyle,
-            cursor: 'pointer',
-            colorScheme: 'dark',
+            ...darkSelectStyle(),
           }}
           onFocus={onFocus}
           onBlur={onBlur}

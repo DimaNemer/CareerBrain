@@ -167,10 +167,11 @@ export async function POST(request, { params }) {
   error: jobError,
 } = await supabase
   .from('job_postings')
- .select(`
-  id,
-  company_id,
-  title,
+  .select(`
+    id,
+    employer_id,
+    company_id,
+    title,
     company_name,
     is_active,
     require_resume,
@@ -189,7 +190,7 @@ export async function POST(request, { params }) {
   .eq('id', id)
   .single()
 
-    if (jobError || !job) {
+if (jobError || !job) {
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
@@ -530,6 +531,37 @@ if (answerRows.length > 0) {
     )
   }
 }
+
+    // Notify the hiring company's team. Recipients are resolved from
+    // company_members server-side by company id - never from the applicant.
+    // Failures are swallowed so a notification problem can never lose a
+    // successfully-submitted application.
+    if (job.company_id) {
+      try {
+        const { sendCompanyNotificationToMembers } = await import(
+          '@/lib/company-notifications'
+        )
+
+        await sendCompanyNotificationToMembers({
+          companyId: job.company_id,
+          type: 'applicant',
+          title: 'New applicant',
+          message: `A new candidate applied for ${job.title}.`,
+          actionUrl: `/employer/jobs/${job.id}/applicants`,
+          data: {
+            application_id: application.id,
+            job_id: job.id,
+            job_title: job.title,
+          },
+          excludeUserIds: [user.id],
+        })
+      } catch (notifyError) {
+        console.error(
+          'New applicant notification failed:',
+          notifyError.message
+        )
+      }
+    }
 
     return NextResponse.json(
       {

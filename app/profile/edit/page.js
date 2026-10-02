@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
+import { lightSelectStyle } from '@/lib/form-controls'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -1892,10 +1893,7 @@ function SelectField({
         name={name}
         value={value}
         onChange={onChange}
-        style={{
-          ...inputStyle,
-          cursor: 'pointer',
-        }}
+        style={lightSelectStyle(inputStyle)}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
       >

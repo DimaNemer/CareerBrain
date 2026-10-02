@@ -90,7 +90,7 @@ const isReadOnly =
 
   const safeJobs = jobsError ? [] : jobs || []
 
-  const totalJobs = safeJobs.length
+const totalJobs = safeJobs.length
   const activeJobs = safeJobs.filter(job => job.is_active).length
   const inactiveJobs = safeJobs.filter(job => !job.is_active).length
 

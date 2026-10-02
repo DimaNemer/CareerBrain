@@ -457,13 +457,13 @@ const applicantName =
             </label>
 
        <select
-  className="application-status-select"
-  value={
-    application.status || 'submitted'
-  }
-  onChange={handleStatusChange}
-  disabled={updatingStatus}
-  style={{
+className="application-status-select app-select"
+   value={
+     application.status || 'submitted'
+   }
+onChange={handleStatusChange}
+          disabled={updatingStatus}
+          style={{
     ...statusSelectStyle,
     opacity: updatingStatus ? 0.65 : 1,
     cursor: updatingStatus
@@ -1030,18 +1030,17 @@ const candidateNameLinkStyle = {
   textDecoration: 'none',
 }
 const statusSelectStyle = {
-  minWidth: '170px',
-  padding: '12px 14px',
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: '12px',
-  color: '#fff',
-  colorScheme: 'dark',
-  outline: 'none',
-  fontFamily: 'inherit',
-  fontSize: '14px',
-  fontWeight: 700,
-}
+    minWidth: '170px',
+    padding: '12px 40px 12px 14px',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '12px',
+    color: '#fff',
+    outline: 'none',
+    fontFamily: 'inherit',
+    fontSize: '14px',
+    fontWeight: 700,
+  }
 
 const savingTextStyle = {
   color: 'rgba(255,255,255,0.4)',

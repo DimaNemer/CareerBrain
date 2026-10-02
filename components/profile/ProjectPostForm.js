@@ -327,6 +327,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { theme } from '@/constants/colors'
+import { lightSelectStyle } from '@/lib/form-controls'
 
 export default function ProjectPostForm({
   completedProjects = [],
@@ -625,10 +626,7 @@ export default function ProjectPostForm({
           name="project_id"
           value={form.project_id}
           onChange={handleChange}
-          style={{
-            ...inputStyle,
-            cursor: 'pointer',
-          }}
+          style={lightSelectStyle(inputStyle)}
         >
           <option value="">
             Link completed project (optional)

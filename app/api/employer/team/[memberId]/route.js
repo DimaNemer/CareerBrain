@@ -1,477 +1,255 @@
-import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase-server'
+import { createServiceClient } from '@/lib/supabase-service'
+import { requireEmployer, isCompanyAdmin } from '@/lib/employer-auth'
+import {
+  countCompanyOwners,
+  sendCompanyNotificationToMembers,
+} from '@/lib/company-notifications'
 
-const VALID_ROLES = [
-  'admin',
-  'recruiter',
-  'viewer',
-]
+const VALID_ROLES = ['owner', 'admin', 'recruiter']
 
-async function getCompanyContext(supabase) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return {
-      authorized: false,
-      status: 401,
-      error: 'Not authenticated',
-    }
-  }
-
-  const {
-    data: membership,
-    error: membershipError,
-  } = await supabase
-    .from('company_members')
-    .select(`
-      id,
-      company_id,
-      user_id,
-      role,
-      job_title,
-      is_current,
-      companies (
-        id,
-        name
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('is_current', true)
-    .maybeSingle()
-
-  if (membershipError || !membership) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'No active company membership found',
-    }
-  }
-
-  const company = Array.isArray(
-    membership.companies
-  )
-    ? membership.companies[0]
-    : membership.companies
-
-  if (!company) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Company not found',
-    }
-  }
-
-  if (
-    !['owner', 'admin'].includes(
-      membership.role
-    )
-  ) {
-    return {
-      authorized: false,
-      status: 403,
-      error:
-        'You do not have permission to manage team members',
-    }
-  }
-
-  return {
-    authorized: true,
-    user,
-    membership,
-    company,
-  }
+/**
+ * PATCH /api/employer/team/[memberId]  body: { role }
+ * DELETE /api/employer/team/[memberId]
+ *
+ * Security notes:
+ * - The target member is loaded with `.eq('company_id', company.id)` where
+ *   `company.id` comes from the caller's own membership. A member id from
+ *   another tenant therefore simply does not resolve (404), which is what
+ *   prevents cross-company tampering.
+ * - Owner/admin only. Recruiters cannot change anything.
+ * - The last remaining owner cannot be demoted or removed, and nobody can
+ *   demote or remove themselves, so a company can never be left ownerless.
+ */
+async function loadGuard() {
+  const supabase = await createClient()
+  return { supabase, guard: await requireEmployer(supabase) }
 }
 
-// PUT /api/employer/team/[memberId]
-export async function PUT(
-  request,
-  { params }
-) {
+export async function PATCH(request, { params }) {
   try {
-    const supabase = await createClient()
+    const { supabase, guard } = await loadGuard()
 
-    const {
-      authorized,
-      status,
-      error,
-      membership: currentMembership,
-      company,
-    } = await getCompanyContext(supabase)
+    if (!guard.authorized) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status })
+    }
 
-    if (!authorized) {
+    if (!isCompanyAdmin(guard.membership)) {
       return NextResponse.json(
-        { error },
-        { status }
+        { error: 'Only company owners and admins can change roles' },
+        { status: 403 }
       )
     }
 
     const { memberId } = await params
 
     if (!memberId) {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid team member ID',
-        },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid member ID' }, { status: 400 })
     }
 
-    const {
-      data: targetMember,
-      error: targetError,
-    } = await supabase
+    let body
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
+    const newRole = body?.role
+
+    if (!VALID_ROLES.includes(newRole)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
+    const { company, user } = guard
+    const serviceSupabase = createServiceClient()
+
+    // Scoped to the caller's own company - this is the IDOR guard.
+    const { data: member, error: memberError } = await serviceSupabase
       .from('company_members')
-      .select(`
-        id,
-        user_id,
-        company_id,
-        role,
-        job_title,
-        is_current
-      `)
+      .select('id, user_id, role')
       .eq('id', memberId)
       .eq('company_id', company.id)
       .eq('is_current', true)
       .maybeSingle()
 
-    if (targetError) {
-      console.error(
-        'Team member lookup error:',
-        targetError.message
-      )
-
+    if (memberError) {
+      console.error('[Team] Member lookup failed:', memberError.message)
       return NextResponse.json(
-        {
-          error:
-            'Unable to load team member',
-        },
+        { error: 'Unable to load that teammate' },
         { status: 500 }
       )
     }
 
-    if (!targetMember) {
+    if (!member) {
+      return NextResponse.json({ error: 'Teammate not found' }, { status: 404 })
+    }
+
+    if (member.user_id === user.id) {
       return NextResponse.json(
-        {
-          error:
-            'Team member not found',
-        },
-        { status: 404 }
+        { error: 'You cannot change your own role' },
+        { status: 400 }
       )
     }
 
-    if (targetMember.role === 'owner') {
-      return NextResponse.json(
-        {
-          error:
-            'The company owner cannot be edited here',
-        },
-        { status: 403 }
-      )
-    }
-
+    // Only an owner may create or remove an owner.
     if (
-      currentMembership.role === 'admin' &&
-      targetMember.role === 'admin'
+      (newRole === 'owner' || member.role === 'owner') &&
+      guard.membership.role !== 'owner'
     ) {
       return NextResponse.json(
-        {
-          error:
-            'Admins cannot manage other admins',
-        },
+        { error: 'Only a company owner can change owner roles' },
         { status: 403 }
       )
     }
 
-    let body
+    if (member.role === 'owner' && newRole !== 'owner') {
+      const ownerCount = await countCompanyOwners(company.id)
 
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid request body',
-        },
-        { status: 400 }
-      )
+      if (ownerCount <= 1) {
+        return NextResponse.json(
+          { error: 'A company must keep at least one owner' },
+          { status: 400 }
+        )
+      }
     }
 
-    const jobTitle =
-      typeof body.job_title === 'string'
-        ? body.job_title.trim()
-        : ''
-
-    const role =
-      typeof body.role === 'string'
-        ? body.role.trim()
-        : ''
-
-    if (!jobTitle) {
-      return NextResponse.json(
-        {
-          error:
-            'Job title is required',
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!VALID_ROLES.includes(role)) {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid company role',
-        },
-        { status: 400 }
-      )
-    }
-
-    if (
-      currentMembership.role === 'admin' &&
-      role === 'admin'
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Admins cannot assign the admin role',
-        },
-        { status: 403 }
-      )
-    }
-
-    const {
-      data: updatedMember,
-      error: updateError,
-    } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from('company_members')
-      .update({
-        job_title: jobTitle,
-        role,
-        updated_at:
-          new Date().toISOString(),
-      })
+      .update({ role: newRole })
       .eq('id', memberId)
       .eq('company_id', company.id)
-      .select(`
-        id,
-        company_id,
-        user_id,
-        job_title,
-        role,
-        is_current,
-        started_at,
-        ended_at,
-        updated_at,
-        profiles (
-          id,
-          full_name,
-          username,
-          headline,
-          avatar_url,
-          location
-        )
-      `)
-      .single()
 
     if (updateError) {
-      console.error(
-        'Team member update error:',
-        updateError.message
-      )
-
+      console.error('[Team] Role update failed:', updateError.message)
       return NextResponse.json(
-        {
-          error:
-            updateError.message ||
-            'Unable to update team member',
-        },
+        { error: 'Unable to update that role' },
         { status: 500 }
       )
     }
 
+    // Tell the affected teammate and the rest of the team about the change.
+    await sendCompanyNotificationToMembers({
+      companyId: company.id,
+      type: 'team',
+      title: 'Role changed',
+      message: `A teammate's role was updated to ${newRole}.`,
+      actionUrl: '/employer/dashboard',
+      data: { changed_role: newRole, member_id: memberId },
+      excludeUserIds: [user.id],
+    })
+
     return NextResponse.json(
-      {
-        message:
-          'Team member updated successfully',
-        member: updatedMember,
-      },
+      { message: 'Role updated', member: { id: memberId, role: newRole } },
       { status: 200 }
     )
   } catch (error) {
-    console.error(
-      'Team member PUT error:',
-      error
-    )
-
+    console.error('[Team] PATCH error:', error)
     return NextResponse.json(
-      {
-        error:
-          'Something went wrong',
-      },
+      { error: 'Something went wrong' },
       { status: 500 }
     )
   }
 }
 
-// DELETE /api/employer/team/[memberId]
-export async function DELETE(
-  request,
-  { params }
-) {
+export async function DELETE(request, { params }) {
   try {
-    const supabase = await createClient()
+    const { supabase, guard } = await loadGuard()
 
-    const {
-      authorized,
-      status,
-      error,
-      membership: currentMembership,
-      company,
-    } = await getCompanyContext(supabase)
+    if (!guard.authorized) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status })
+    }
 
-    if (!authorized) {
+    if (!isCompanyAdmin(guard.membership)) {
       return NextResponse.json(
-        { error },
-        { status }
+        { error: 'Only company owners and admins can remove teammates' },
+        { status: 403 }
       )
     }
 
     const { memberId } = await params
 
     if (!memberId) {
-      return NextResponse.json(
-        {
-          error:
-            'Invalid team member ID',
-        },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid member ID' }, { status: 400 })
     }
 
-    const {
-      data: targetMember,
-      error: targetError,
-    } = await supabase
+    const { company, user, profile } = guard
+    const serviceSupabase = createServiceClient()
+
+    const { data: member, error: memberError } = await serviceSupabase
       .from('company_members')
-      .select(`
-        id,
-        user_id,
-        role,
-        is_current
-      `)
+      .select('id, user_id, role')
       .eq('id', memberId)
       .eq('company_id', company.id)
       .eq('is_current', true)
       .maybeSingle()
 
-    if (targetError) {
-      console.error(
-        'Team member remove lookup error:',
-        targetError.message
-      )
-
+    if (memberError) {
+      console.error('[Team] Member lookup failed:', memberError.message)
       return NextResponse.json(
-        {
-          error:
-            'Unable to load team member',
-        },
+        { error: 'Unable to load that teammate' },
         { status: 500 }
       )
     }
 
-    if (!targetMember) {
+    if (!member) {
+      return NextResponse.json({ error: 'Teammate not found' }, { status: 404 })
+    }
+
+    if (member.user_id === user.id) {
       return NextResponse.json(
-        {
-          error:
-            'Team member not found',
-        },
-        { status: 404 }
+        { error: 'You cannot remove yourself from the company' },
+        { status: 400 }
       )
     }
 
-    if (targetMember.role === 'owner') {
+    if (member.role === 'owner' && guard.membership.role !== 'owner') {
       return NextResponse.json(
-        {
-          error:
-            'The company owner cannot be removed',
-        },
+        { error: 'Only a company owner can remove another owner' },
         { status: 403 }
       )
     }
 
-    if (
-      currentMembership.role === 'admin' &&
-      targetMember.role === 'admin'
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            'Admins cannot remove other admins',
-        },
-        { status: 403 }
-      )
+    if (member.role === 'owner') {
+      const ownerCount = await countCompanyOwners(company.id)
+
+      if (ownerCount <= 1) {
+        return NextResponse.json(
+          { error: 'A company must keep at least one owner' },
+          { status: 400 }
+        )
+      }
     }
 
-    const today =
-      new Date()
-        .toISOString()
-        .slice(0, 10)
-
-    const {
-      data: removedMember,
-      error: removeError,
-    } = await supabase
+    // Soft remove: keeps historical rows (job ownership, etc.) intact.
+    const { error: removeError } = await serviceSupabase
       .from('company_members')
-      .update({
-        is_current: false,
-        ended_at: today,
-        updated_at:
-          new Date().toISOString(),
-      })
+      .update({ is_current: false })
       .eq('id', memberId)
       .eq('company_id', company.id)
-      .select()
-      .single()
 
     if (removeError) {
-      console.error(
-        'Team member remove error:',
-        removeError.message
-      )
-
+      console.error('[Team] Remove failed:', removeError.message)
       return NextResponse.json(
-        {
-          error:
-            removeError.message ||
-            'Unable to remove team member',
-        },
+        { error: 'Unable to remove that teammate' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(
-      {
-        message:
-          'Team member removed successfully',
-        member: removedMember,
-      },
-      { status: 200 }
-    )
-  } catch (error) {
-    console.error(
-      'Team member DELETE error:',
-      error
-    )
+    await sendCompanyNotificationToMembers({
+      companyId: company.id,
+      type: 'team',
+      title: 'Teammate removed',
+      message: `${profile?.full_name || 'An admin'} removed a teammate from the workspace.`,
+      actionUrl: '/employer/dashboard',
+      excludeUserIds: [user.id, member.user_id],
+    })
 
+    return NextResponse.json({ message: 'Teammate removed' }, { status: 200 })
+  } catch (error) {
+    console.error('[Team] DELETE error:', error)
     return NextResponse.json(
-      {
-        error:
-          'Something went wrong',
-      },
+      { error: 'Something went wrong' },
       { status: 500 }
     )
   }

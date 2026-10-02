@@ -589,7 +589,7 @@ export default function OpportunitiesPage() {
                   <Briefcase className="w-3 h-3" /> Type
                 </label>
                 <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} aria-labelledby="type-label"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300 transition-all h-10 appearance-none cursor-pointer">
+                  className="app-select-light w-full px-3 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300 transition-all h-10">
                   {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>

@@ -32,6 +32,7 @@ export default function NotificationBell({ userId }) {
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(!open)}
+        className="notification-trigger"
         style={{
           position: 'relative',
           background: 'none',
@@ -76,13 +77,7 @@ export default function NotificationBell({ userId }) {
       </button>
 
       {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 8px)',
-          right: 0,
-          width: '380px',
-          maxWidth: 'calc(100vw - 24px)',
-          maxHeight: '480px',
+        <div className="notification-dropdown" style={{
           background: theme.bg.card,
           borderRadius: '12px',
           border: `1px solid ${theme.border.light}`,
@@ -98,8 +93,9 @@ export default function NotificationBell({ userId }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '8px',
           }}>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: theme.text.primary }}>
                 Notifications
               </h3>
@@ -119,8 +115,9 @@ export default function NotificationBell({ userId }) {
                   fontSize: '12px',
                   fontWeight: 500,
                   color: theme.text.indigo,
-                  padding: '4px 8px',
+                  padding: '6px 8px',
                   borderRadius: '6px',
+                  flexShrink: 0,
                   transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = theme.bg.hover }}
