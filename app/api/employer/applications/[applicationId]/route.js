@@ -331,23 +331,37 @@ if (updateError) {
       try {
         const serviceSupabase = createServiceClient()
 
-        await serviceSupabase.from('notifications').insert({
-          user_id: existingApplication.applicant_id,
-          type: newStatus === 'accepted' ? 'application' : 'applicant',
-          title: STATUS_COPY[newStatus].title,
-          message: jobTitle
-            ? `${STATUS_COPY[newStatus].message} (${jobTitle})`
-            : STATUS_COPY[newStatus].message,
-          is_read: false,
-          is_emailed: false,
-          action_url: '/my-applications',
-          data: {
-            application_id: application.id,
-            job_id: application.job_id,
-            status: newStatus,
-            company_id: company.id,
-          },
-        })
+        // The applicant has no applications page of their own yet, so the
+        // bell links to their dashboard rather than a dead route.
+        const { error: notifyError } = await serviceSupabase
+          .from('notifications')
+          .insert({
+            user_id: existingApplication.applicant_id,
+            type: newStatus === 'accepted' ? 'application' : 'applicant',
+            title: STATUS_COPY[newStatus].title,
+            message: jobTitle
+              ? `${STATUS_COPY[newStatus].message} (${jobTitle})`
+              : STATUS_COPY[newStatus].message,
+            is_read: false,
+            is_emailed: false,
+            action_url: '/dashboard',
+            data: {
+              application_id: application.id,
+              job_id: application.job_id,
+              status: newStatus,
+              company_id: company.id,
+            },
+          })
+
+        /*
+         * supabase-js RESOLVES with { error } on a rejected insert; it does not
+         * throw. Without this check the catch below is unreachable, so a failed
+         * insert (missing column, FK violation, RLS) vanished with no log and
+         * the applicant simply never heard about it.
+         */
+        if (notifyError) {
+          throw new Error(notifyError.message)
+        }
       } catch (notifyError) {
         // Notification delivery must never fail the status update.
         console.error(

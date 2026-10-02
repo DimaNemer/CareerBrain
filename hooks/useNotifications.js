@@ -143,10 +143,41 @@ export function useNotifications(userId) {
 
     channelRef.current = channel
 
+    /*
+     * Realtime is the fast path, but it is not the only one. A subscriber can
+     * connect successfully, report SUBSCRIBED, and still never receive an
+     * event if `notifications` is missing from the supabase_realtime
+     * publication. When that happened the bell looked identical to "nothing
+     * new", which is indistinguishable from a delivery bug.
+     *
+     * So poll as a floor. This also covers the case where a user leaves a tab
+     * open and the websocket drops without the client noticing. 30s is cheap:
+     * the query is indexed on (user_id, created_at DESC) and only runs while
+     * the tab is visible.
+     */
+    const POLL_INTERVAL = 30 * 1000
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+      }
+    }, POLL_INTERVAL)
+
+    // A tab restored from the background is the most likely moment for a
+    // missed event, and the user is looking at the bell again.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     const handleRefresh = () => fetchNotifications()
     window.addEventListener('notifications-updated', handleRefresh)
 
     return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibility)
       window.removeEventListener('notifications-updated', handleRefresh)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
