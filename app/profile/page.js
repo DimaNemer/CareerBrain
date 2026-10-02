@@ -117,6 +117,38 @@ export default async function PrivateProfilePage() {
       ascending: false,
     })
 
+    const {
+  data: applications = [],
+  error: applicationsError,
+} = await supabase
+  .from('job_applications')
+  .select(`
+    id,
+    job_id,
+    status,
+    created_at,
+    updated_at,
+    job_postings (
+      id,
+      title,
+      company_name,
+      location,
+      employment_type,
+      experience_level,
+      is_active
+    )
+  `)
+  .eq('applicant_id', user.id)
+  .order('created_at', {
+    ascending: false,
+  })
+
+if (applicationsError) {
+  console.error(
+    'Applications load error:',
+    applicationsError.message
+  )
+}
   const skills = profile?.user_skills || []
 
   const verifiedSkills = skills.filter(
@@ -423,6 +455,44 @@ export default async function PrivateProfilePage() {
   )}
 </Section>
 )}
+<Section
+  title="My applications"
+  count={applications.length}
+  description="Track jobs you have applied to and their current status."
+>
+  {applications.length === 0 ? (
+    <EmptyState
+      icon="💼"
+      message="You have not applied to any CareerBrain jobs yet."
+    />
+  ) : (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+      }}
+    >
+      {applications.map(application => {
+        const job = Array.isArray(
+          application.job_postings
+        )
+          ? application.job_postings[0]
+          : application.job_postings
+
+        if (!job) return null
+
+        return (
+          <ApplicationRow
+            key={application.id}
+            application={application}
+            job={job}
+          />
+        )
+      })}
+    </div>
+  )}
+</Section>
         <Section
           title="Owned projects"
           count={ownedProjects.length}
@@ -795,7 +865,127 @@ function ProjectRow({
     </div>
   )
 }
+function ApplicationRow({
+  application,
+  job,
+}) {
+  const statusLabels = {
+    submitted: 'Submitted',
+    reviewing: 'Under review',
+    shortlisted: 'Shortlisted',
+    rejected: 'Not selected',
+    accepted: 'Accepted',
+  }
 
+  const statusLabel =
+    statusLabels[application.status] ||
+    application.status
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        padding: '16px',
+        background: '#F9FAFB',
+        border: '1px solid #E5E7EB',
+        borderRadius: '13px',
+        flexWrap: 'wrap',
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          minWidth: '220px',
+        }}
+      >
+        <h3
+          style={{
+            margin: '0 0 5px',
+            color: '#111827',
+            fontSize: '14px',
+            fontWeight: 700,
+          }}
+        >
+          {job.title}
+        </h3>
+
+        <p
+          style={{
+            margin: '0 0 5px',
+            color: '#6B7280',
+            fontSize: '12px',
+          }}
+        >
+          {job.company_name || 'Company'}
+          {job.location
+            ? ` · ${job.location}`
+            : ''}
+        </p>
+
+        <p
+          style={{
+            margin: 0,
+            color: '#9CA3AF',
+            fontSize: '11px',
+          }}
+        >
+          Applied{' '}
+          {new Date(
+            application.created_at
+          ).toLocaleDateString(
+            'en-US',
+            {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            }
+          )}
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            padding: '6px 10px',
+            borderRadius: '20px',
+            background: '#EEF2FF',
+            color: '#4338CA',
+            fontSize: '11px',
+            fontWeight: 700,
+          }}
+        >
+          {statusLabel}
+        </span>
+
+        <Link
+          href={`/jobs/${job.id}`}
+          style={{
+            padding: '7px 11px',
+            borderRadius: '8px',
+            border: '1px solid #E5E7EB',
+            background: '#FFFFFF',
+            color: '#374151',
+            textDecoration: 'none',
+            fontSize: '11px',
+            fontWeight: 600,
+          }}
+        >
+          View job →
+        </Link>
+      </div>
+    </div>
+  )
+}
 function PostCard({ post }) {
   return (
     <div
