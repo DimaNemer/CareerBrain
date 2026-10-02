@@ -1,5 +1,12 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import {
+  requireEmployer,
+  canManagePipeline,
+} from '@/lib/employer-auth'
+import {
+  createServiceClient,
+} from '@/lib/supabase-service'
 
 const VALID_STATUSES = [
   'submitted',
@@ -9,84 +16,27 @@ const VALID_STATUSES = [
   'accepted',
 ]
 
-async function verifyEmployer(supabase) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return {
-      authorized: false,
-      status: 401,
-      error: 'Not authenticated',
-    }
-  }
-
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('id', user.id)
-      .single()
-
-  if (
-    profileError ||
-    !profile ||
-    profile.role !== 'employer'
-  ) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Employer access required',
-    }
-  }
-
-  const {
-    data: membership,
-    error: membershipError,
-  } = await supabase
-    .from('company_members')
-    .select(`
-      company_id,
-      role,
-      job_title,
-      companies (
-        id,
-        name
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('is_current', true)
-    .maybeSingle()
-
-  if (membershipError || !membership) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'No active company membership found',
-    }
-  }
-
-  const company = Array.isArray(membership.companies)
-    ? membership.companies[0]
-    : membership.companies
-
-  if (!company) {
-    return {
-      authorized: false,
-      status: 403,
-      error: 'Company not found',
-    }
-  }
-
-  return {
-    authorized: true,
-    user,
-    profile,
-    membership,
-    company,
-  }
+const STATUS_COPY = {
+  reviewing: {
+    title: 'Your application is being reviewed',
+    message:
+      'The employer is reviewing your application. We will let you know as soon as there is news.',
+  },
+  shortlisted: {
+    title: 'You have been shortlisted',
+    message:
+      'Great news - the employer shortlisted you. Keep an eye on your profile and CV.',
+  },
+  rejected: {
+    title: 'Update on your application',
+    message:
+      'The employer has decided not to move forward with your application right now. Keep applying - your next role is out there.',
+  },
+  accepted: {
+    title: 'Your application was accepted',
+    message:
+      'Congratulations! The employer accepted your application. They will be in touch with the next steps.',
+  },
 }
 
 // GET /api/employer/applications/[applicationId]
@@ -94,20 +44,16 @@ export async function GET(request, { params }) {
   try {
     const supabase = await createClient()
 
-    const {
-  authorized,
-  status,
-  error,
-  membership,
-  company,
-} = await verifyEmployer(supabase)
+    const guard = await requireEmployer(supabase)
 
-    if (!authorized) {
+    if (!guard.authorized) {
       return NextResponse.json(
-        { error },
-        { status }
+        { error: guard.error },
+        { status: guard.status }
       )
     }
+
+    const { company } = guard
 
     const { applicationId } = await params
 
@@ -265,33 +211,26 @@ export async function PUT(request, { params }) {
   try {
     const supabase = await createClient()
 
-  const {
-  authorized,
-  status,
-  error,
-  membership,
-  company,
-} = await verifyEmployer(supabase)
+    const guard = await requireEmployer(supabase)
 
-    if (!authorized) {
+    if (!guard.authorized) {
       return NextResponse.json(
-        { error },
-        { status }
+        { error: guard.error },
+        { status: guard.status }
       )
     }
-if (
-  !['owner', 'admin', 'recruiter'].includes(
-    membership.role
-  )
-) {
-  return NextResponse.json(
-    {
-      error:
-        'You do not have permission to update application statuses for this company',
-    },
-    { status: 403 }
-  )
-}
+
+    const { membership, company } = guard
+
+    if (!canManagePipeline(membership)) {
+      return NextResponse.json(
+        {
+          error:
+            'You do not have permission to update application statuses for this company',
+        },
+        { status: 403 }
+      )
+    }
     const { applicationId } = await params
 
     if (!applicationId) {
@@ -329,8 +268,11 @@ const {
   .select(`
     id,
     job_id,
+    applicant_id,
+    status,
     job_postings!inner (
-      company_id
+      company_id,
+      title
     )
   `)
   .eq('id', applicationId)
@@ -355,7 +297,8 @@ const {
       .update({
         status: newStatus,
       })
-      .eq('id', applicationId)
+.eq('id', applicationId)
+      .eq('job_id', existingApplication.job_id)
       .select(`
         id,
         job_id,
@@ -365,11 +308,54 @@ const {
       `)
       .single()
 
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      )
+if (updateError) {
+  console.error(
+    'Application status update failed:',
+    updateError.message
+  )
+
+  return NextResponse.json(
+    { error: 'Unable to update that application' },
+    { status: 500 }
+  )
+}
+
+    // Tell the applicant when their stage actually changes. The recipient is
+    // the applicant_id read from the application row that we already proved
+    // belongs to this company - it is never taken from the request body.
+    const statusChanged =
+      existingApplication.status !== application.status
+
+    if (statusChanged && STATUS_COPY[newStatus]) {
+      const jobTitle = existingApplication.job_postings?.title
+
+      try {
+        const serviceSupabase = createServiceClient()
+
+        await serviceSupabase.from('notifications').insert({
+          user_id: existingApplication.applicant_id,
+          type: newStatus === 'accepted' ? 'application' : 'applicant',
+          title: STATUS_COPY[newStatus].title,
+          message: jobTitle
+            ? `${STATUS_COPY[newStatus].message} (${jobTitle})`
+            : STATUS_COPY[newStatus].message,
+          is_read: false,
+          is_emailed: false,
+          action_url: '/my-applications',
+          data: {
+            application_id: application.id,
+            job_id: application.job_id,
+            status: newStatus,
+            company_id: company.id,
+          },
+        })
+      } catch (notifyError) {
+        // Notification delivery must never fail the status update.
+        console.error(
+          'Applicant status notification failed:',
+          notifyError.message
+        )
+      }
     }
 
     return NextResponse.json(

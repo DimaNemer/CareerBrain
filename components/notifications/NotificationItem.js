@@ -8,6 +8,11 @@ const typeColors = {
   application: { bg: theme.bg.emeraldSoft, border: '#D1FAE5', icon: '📋', accent: theme.text.emerald },
   skill_gap: { bg: theme.bg.amberSoft, border: '#FEF3C7', icon: '🎯', accent: theme.text.amber },
   profile_view: { bg: '#F0F9FF', border: '#BAE6FD', icon: '👁', accent: '#0284C7' },
+  applicant: { bg: theme.bg.emeraldSoft, border: '#D1FAE5', icon: '👤', accent: theme.text.emerald },
+  interview: { bg: '#F5F3FF', border: '#DDD6FE', icon: '🗓', accent: '#6D28D9' },
+  team: { bg: '#F0F9FF', border: '#BAE6FD', icon: '👥', accent: '#0284C7' },
+  message: { bg: theme.bg.indigoSoft, border: theme.border.indigo, icon: '💬', accent: theme.text.indigo },
+  company_post: { bg: theme.bg.card, border: theme.border.light, icon: '📢', accent: theme.text.secondary },
   general: { bg: theme.bg.card, border: theme.border.light, icon: '🔔', accent: theme.text.secondary },
 }
 

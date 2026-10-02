@@ -80,12 +80,12 @@ const company = Array.isArray(membership.companies)
 
   const safeJobs = jobsError ? [] : jobs || []
 
-  const totalJobs = safeJobs.length
+const totalJobs = safeJobs.length
   const activeJobs = safeJobs.filter(job => job.is_active).length
   const inactiveJobs = safeJobs.filter(job => !job.is_active).length
 
  const firstName =
-  profile.full_name?.trim().split(' ')[0] ||
+   profile.full_name?.trim().split(' ')[0] ||
   'Employer'
 
   return (
@@ -187,6 +187,24 @@ const company = Array.isArray(membership.companies)
     }}
   >
     View company
+  </Link>
+
+  <Link
+    href="/employer/team"
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '13px 18px',
+      borderRadius: '12px',
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.10)',
+      color: '#fff',
+      textDecoration: 'none',
+      fontWeight: 700,
+    }}
+  >
+    Manage team
   </Link>
 
   <Link

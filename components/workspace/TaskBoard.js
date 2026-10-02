@@ -139,12 +139,12 @@ export default function TaskBoard({
             style={{ width: '100%', padding: '9px 13px', border: `1px solid ${theme.border.focus}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
           />
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {/* Assign to dropdown */}
             <select
               value={newTask.assigned_to}
               onChange={e => setNewTask(prev => ({ ...prev, assigned_to: e.target.value }))}
-              style={{ flex: 1, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary, cursor: 'pointer' }}
+              style={{ flex: '1 1 160px', minWidth: 0, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary, cursor: 'pointer' }}
             >
               <option value="">Assign to... (optional)</option>
             {uniqueTeamMembers.map(tm => (
@@ -160,7 +160,7 @@ export default function TaskBoard({
               type="date"
               value={newTask.due_date}
               onChange={e => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
-              style={{ padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary }}
+              style={{ flex: '1 1 140px', minWidth: 0, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary }}
             />
           </div>
 
@@ -178,13 +178,13 @@ export default function TaskBoard({
       )}
 
       {/* Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div className="ws-board">
         {COLUMNS.map(col => (
-          <div key={col.key} style={{ background: theme.bg.secondary, border: `1px solid ${theme.border.light}`, borderRadius: '14px', padding: '16px', minHeight: '200px' }}>
+          <div key={col.key} style={{ background: theme.bg.secondary, border: `1px solid ${theme.border.light}`, borderRadius: '14px', padding: '16px', minHeight: '200px', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: col.color, flexShrink: 0 }} />
               <span style={{ fontSize: '13px', fontWeight: 600, color: theme.text.primary }}>{col.label}</span>
-              <span style={{ marginLeft: 'auto', fontSize: '12px', color: theme.text.tertiary, background: theme.border.light, padding: '1px 7px', borderRadius: '10px' }}>
+              <span style={{ marginLeft: 'auto', fontSize: '12px', color: theme.text.tertiary, background: theme.border.light, padding: '1px 7px', borderRadius: '10px', flexShrink: 0 }}>
                 {tasksByStatus[col.key].length}
               </span>
             </div>

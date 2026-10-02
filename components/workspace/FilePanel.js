@@ -275,8 +275,8 @@ const [newNote, setNewNote] = useState({
           onChange={e => setSearch(e.target.value)}
           placeholder="Search files and notes..."
           style={{
-            flex: 1,
-            minWidth: '220px',
+            flex: '1 1 200px',
+            minWidth: 0,
             padding: '9px 12px',
             border: `1px solid ${theme.border.light}`,
             borderRadius: '8px',
@@ -424,7 +424,7 @@ const [newNote, setNewNote] = useState({
               border: `1px solid ${theme.border.light}`,
               borderRadius: '12px',
             }}>
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div style={{
                   width: '48px',
                   height: '48px',
@@ -439,7 +439,7 @@ const [newNote, setNewNote] = useState({
                   📝
                 </div>
 
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 160px', minWidth: 0 }}>
                   <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text.primary, marginBottom: '4px' }}>
                     {note.is_pinned ? '📌 ' : ''}{note.title}
                   </div>
@@ -459,7 +459,7 @@ const [newNote, setNewNote] = useState({
   </p>
 )}
 
-                  <div style={{ fontSize: '12px', color: theme.text.tertiary }}>
+                  <div style={{ fontSize: '12px', color: theme.text.tertiary, overflowWrap: 'anywhere' }}>
                     {note.profiles?.full_name || 'Unknown'} · {getCategoryLabel(note.category)} · {new Date(note.updated_at || note.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -504,6 +504,7 @@ const [newNote, setNewNote] = useState({
               background: theme.bg.secondary,
               border: `1px solid ${theme.border.light}`,
               borderRadius: '12px',
+              flexWrap: 'wrap',
             }}>
               {isImage(file.file_type) ? (
                 <img
@@ -534,7 +535,7 @@ const [newNote, setNewNote] = useState({
                 </div>
               )}
 
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: '1 1 160px', minWidth: 0 }}>
                 <div style={{
                   fontSize: '14px',
                   fontWeight: 500,
@@ -547,7 +548,7 @@ const [newNote, setNewNote] = useState({
                   {file.is_pinned ? '📌 ' : ''}{file.file_name}
                 </div>
 
-                <div style={{ fontSize: '12px', color: theme.text.secondary }}>
+                <div style={{ fontSize: '12px', color: theme.text.secondary, overflowWrap: 'anywhere' }}>
                   {file.profiles?.full_name} · {file.category || 'Docs'} · {formatSize(file.file_size)} · {new Date(file.uploaded_at).toLocaleDateString()}
                 </div>
               </div>
@@ -601,7 +602,7 @@ const [newNote, setNewNote] = useState({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '24px',
+    padding: 'clamp(12px, 4vw, 24px)',
   }}>
     <div style={{
       width: '100%',
@@ -610,7 +611,7 @@ const [newNote, setNewNote] = useState({
       overflow: 'auto',
       background: theme.bg.card,
       borderRadius: '16px',
-      padding: '24px',
+      padding: 'clamp(16px, 4vw, 24px)',
       border: `1px solid ${theme.border.light}`,
     }}>
       <div style={{

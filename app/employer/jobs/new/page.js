@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { darkSelectStyle } from '@/lib/form-controls'
 
 const initialForm = {
   title: '',
@@ -250,7 +251,8 @@ export default function CreateJobPage() {
                   name="employment_type"
                   value={form.employment_type}
                   onChange={handleChange}
-                  style={selectStyle}
+                className="app-select"
+                style={selectStyle}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
                 >
@@ -290,6 +292,7 @@ export default function CreateJobPage() {
                 name="experience_level"
                 value={form.experience_level}
                 onChange={handleChange}
+              className="app-select"
                 style={selectStyle}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
@@ -628,10 +631,9 @@ const inputStyle = {
 }
 
 const selectStyle = {
-  ...inputStyle,
-  cursor: 'pointer',
-  colorScheme: 'dark',
-}
+    ...inputStyle,
+    ...darkSelectStyle(),
+  }
 
 const textareaStyle = {
   ...inputStyle,

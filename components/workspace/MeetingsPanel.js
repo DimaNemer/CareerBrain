@@ -153,8 +153,8 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
             onBlur={e => e.target.style.borderColor = theme.border.light}
           />
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 180px', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '12px', color: theme.text.secondary, marginBottom: '4px', fontWeight: 500 }}>
                 Date & time *
               </label>
@@ -168,7 +168,7 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
                 onBlur={e => e.target.style.borderColor = theme.border.light}
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 180px', minWidth: 0 }}>
               <label style={{ display: 'block', fontSize: '12px', color: theme.text.secondary, marginBottom: '4px', fontWeight: 500 }}>
                 Meeting link (optional)
               </label>
@@ -279,6 +279,7 @@ function MeetingCard({ meeting, isPast, currentUserId, isOwner, onDelete, format
       background: isPast ? theme.bg.secondary : theme.bg.card,
       border: `1px solid ${isPast ? theme.border.light : theme.border.indigo}`,
       borderRadius: '12px',
+      flexWrap: 'wrap',
     }}>
       {/* Date block */}
       <div style={{
@@ -298,15 +299,15 @@ function MeetingCard({ meeting, isPast, currentUserId, isOwner, onDelete, format
       </div>
 
       {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text.primary, marginBottom: '4px' }}>
+      <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: theme.text.primary, marginBottom: '4px', overflowWrap: 'anywhere' }}>
           {meeting.title}
         </div>
-        <div style={{ fontSize: '12px', color: theme.text.secondary, marginBottom: meeting.description ? '6px' : 0 }}>
+        <div style={{ fontSize: '12px', color: theme.text.secondary, marginBottom: meeting.description ? '6px' : 0, overflowWrap: 'anywhere' }}>
           🕐 {formatTime(meeting.scheduled_at)} · Scheduled by {meeting.profiles?.full_name}
         </div>
         {meeting.description && (
-          <div style={{ fontSize: '13px', color: theme.text.secondary, lineHeight: 1.5 }}>
+          <div style={{ fontSize: '13px', color: theme.text.secondary, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
             {meeting.description}
           </div>
         )}

@@ -6,6 +6,7 @@ import {
   useRouter,
 } from 'next/navigation'
 import Link from 'next/link'
+import { darkSelectStyle } from '@/lib/form-controls'
 
 const initialForm = {
   title: '',
@@ -386,7 +387,8 @@ export default function EditJobPage() {
                     form.employment_type
                   }
                   onChange={handleChange}
-                  style={selectStyle}
+                className="app-select"
+                style={selectStyle}
                 >
                   <option value="">
                     Select employment type
@@ -426,6 +428,7 @@ export default function EditJobPage() {
                   form.experience_level
                 }
                 onChange={handleChange}
+              className="app-select"
                 style={selectStyle}
               >
                 <option value="">
@@ -611,6 +614,7 @@ export default function EditJobPage() {
                   form.cover_letter_requirement
                 }
                 onChange={handleChange}
+              className="app-select"
                 style={selectStyle}
               >
                 <option value="not_requested">
@@ -842,10 +846,9 @@ const inputStyle = {
 }
 
 const selectStyle = {
-  ...inputStyle,
-  cursor: 'pointer',
-  colorScheme: 'dark',
-}
+    ...inputStyle,
+    ...darkSelectStyle(),
+  }
 
 const textareaStyle = {
   ...inputStyle,
