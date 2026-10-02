@@ -68,7 +68,7 @@ export async function DELETE() {
       message: `${
         profile?.full_name || 'A teammate'
       } left your company workspace.`,
-      actionUrl: '/employer/dashboard',
+      actionUrl: '/employer/team',
       excludeUserIds: [user.id],
     })
 

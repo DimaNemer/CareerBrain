@@ -125,7 +125,7 @@ export async function POST(request, { params }) {
         type: 'team',
         title: 'New teammate joined',
         message: `${user.email} accepted your invite and joined as ${acceptedMembership.role}.`,
-        actionUrl: '/employer/dashboard',
+        actionUrl: '/employer/team',
         data: {
           joined_email: user.email,
           joined_role: acceptedMembership.role,

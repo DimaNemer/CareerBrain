@@ -7,7 +7,7 @@ import {
   sendCompanyNotificationToMembers,
 } from '@/lib/company-notifications'
 
-const VALID_ROLES = ['owner', 'admin', 'recruiter']
+const VALID_ROLES = ['owner', 'admin', 'recruiter', 'viewer']
 
 /**
  * PATCH /api/employer/team/[memberId]  body: { role }
@@ -60,6 +60,15 @@ export async function PATCH(request, { params }) {
     if (!VALID_ROLES.includes(newRole)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
+
+    // Job title is editable alongside the role. An empty string clears it, so
+    // null is only used when the key is absent entirely.
+    const hasJobTitle = Object.prototype.hasOwnProperty.call(body, 'job_title')
+    const jobTitle = hasJobTitle
+      ? typeof body.job_title === 'string'
+        ? body.job_title.trim().slice(0, 120) || null
+        : null
+      : undefined
 
     const { company, user } = guard
     const serviceSupabase = createServiceClient()
@@ -114,9 +123,15 @@ export async function PATCH(request, { params }) {
       }
     }
 
+    const updates = { role: newRole }
+
+    if (jobTitle !== undefined) {
+      updates.job_title = jobTitle
+    }
+
     const { error: updateError } = await serviceSupabase
       .from('company_members')
-      .update({ role: newRole })
+      .update(updates)
       .eq('id', memberId)
       .eq('company_id', company.id)
 
@@ -134,7 +149,7 @@ export async function PATCH(request, { params }) {
       type: 'team',
       title: 'Role changed',
       message: `A teammate's role was updated to ${newRole}.`,
-      actionUrl: '/employer/dashboard',
+      actionUrl: '/employer/team',
       data: { changed_role: newRole, member_id: memberId },
       excludeUserIds: [user.id],
     })
@@ -241,7 +256,7 @@ export async function DELETE(request, { params }) {
       type: 'team',
       title: 'Teammate removed',
       message: `${profile?.full_name || 'An admin'} removed a teammate from the workspace.`,
-      actionUrl: '/employer/dashboard',
+      actionUrl: '/employer/team',
       excludeUserIds: [user.id, member.user_id],
     })
 

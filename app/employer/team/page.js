@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import TeamManager from '@/components/employer/TeamManager'
 
 export const metadata = {
@@ -35,6 +34,7 @@ export default async function EmployerTeamPage() {
     .select(`
       company_id,
       role,
+      job_title,
       companies (
         id,
         name
@@ -67,7 +67,8 @@ export default async function EmployerTeamPage() {
       profiles (
         id,
         full_name,
-        username
+        username,
+        avatar_url
       )
     `)
     .eq('company_id', company.id)
@@ -118,79 +119,15 @@ export default async function EmployerTeamPage() {
       }}
     >
       <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '20px',
-            marginBottom: '28px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <p
-              style={{
-                margin: '0 0 8px',
-                color: '#818CF8',
-                fontWeight: 700,
-                fontSize: '14px',
-              }}
-            >
-              {company.name || 'Your company'}
-            </p>
-
-            <h1 style={{ margin: '0 0 10px', fontSize: '28px' }}>
-              Manage team
-            </h1>
-
-            <p
-              style={{
-                margin: 0,
-                color: 'rgba(255,255,255,0.5)',
-                fontSize: '15px',
-              }}
-            >
-              {safeMembers.length} member
-              {safeMembers.length === 1 ? '' : 's'} with access to this
-              workspace.
-            </p>
-          </div>
-
-          <Link
-            href="/employer/dashboard"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '12px 18px',
-              borderRadius: '12px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.10)',
-              color: '#fff',
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '14px',
-            }}
-          >
-            Back to dashboard
-          </Link>
-        </div>
-
-        <section
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '20px',
-            padding: '24px',
-          }}
-        >
-          <TeamManager
-            initialMembers={safeMembers}
-            initialInvites={pendingInvites}
-            canManage={canManage}
-            currentUserId={user.id}
-          />
-        </section>
+        <TeamManager
+          companyName={company.name || 'Your company'}
+          initialMembers={safeMembers}
+          initialInvites={pendingInvites}
+          canManage={canManage}
+          currentUserId={user.id}
+          currentRole={membership.role}
+          currentJobTitle={membership.job_title}
+        />
       </div>
     </main>
   )

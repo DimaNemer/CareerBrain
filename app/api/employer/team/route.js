@@ -4,12 +4,41 @@ import { createServiceClient } from '@/lib/supabase-service'
 import { requireEmployer, isCompanyAdmin } from '@/lib/employer-auth'
 import { sendCompanyNotificationToMembers } from '@/lib/company-notifications'
 
-const VALID_ROLES = ['owner', 'admin', 'recruiter']
+const VALID_ROLES = ['owner', 'admin', 'recruiter', 'viewer']
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_PENDING_INVITES = 25
 
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+/**
+ * Normalizes the invite target.
+ *
+ * The UI asks for a Career Brain username ("@maram"), but invites are stored
+ * against an email address and acceptance is verified against the account's
+ * verified email, so a username has to be resolved before it can be stored.
+ * A raw email is still accepted so the API does not force one input style.
+ *
+ * @returns {'email'|'username'|null} which form the caller supplied
+ */
+function normalizeInviteTarget(value) {
+  const raw = typeof value === 'string' ? value.trim() : ''
+
+  if (!raw) return null
+
+  if (EMAIL_PATTERN.test(raw)) {
+    return { kind: 'email', value: raw.toLowerCase() }
+  }
+
+  // Accept "@maram" and "maram" alike; usernames cannot contain "@".
+  const username = raw.replace(/^@+/, '').trim().toLowerCase()
+
+  if (!/^[a-z0-9._-]{2,64}$/.test(username)) {
+    return null
+  }
+
+  return { kind: 'username', value: username }
 }
 
 /**
@@ -39,7 +68,8 @@ export async function GET() {
           id,
           full_name,
           username,
-          headline
+          headline,
+          avatar_url
         )
       `)
       .eq('company_id', company.id)
@@ -121,15 +151,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const email = normalizeEmail(body?.email)
+    const target = normalizeInviteTarget(body?.username ?? body?.email)
     const jobTitle =
       typeof body?.job_title === 'string' ? body.job_title.trim().slice(0, 120) : null
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    if (!target) {
+      return NextResponse.json(
+        { error: 'Enter a username or email address' },
+        { status: 400 }
+      )
     }
 
-    if (!EMAIL_PATTERN.test(email) || email.length > 254) {
+    if (target.kind === 'email' && target.value.length > 254) {
       return NextResponse.json(
         { error: 'Enter a valid email address' },
         { status: 400 }
@@ -152,6 +185,80 @@ export async function POST(request) {
 
     const { company, user, profile } = guard
     const serviceSupabase = createServiceClient()
+
+    // Resolve a username to the account's verified email. invites.email is the
+    // column the accept RPC matches against auth.users, so a username cannot be
+    // stored here directly. The service client is required to read auth.users,
+    // which is not exposed to a user-scoped client.
+    let email = target.value
+    let inviteeUserId = null
+
+    if (target.kind === 'username') {
+      const { data: invitee, error: lookupError } = await serviceSupabase
+        .from('profiles')
+        .select('id, role')
+        .eq('username', target.value)
+        .maybeSingle()
+
+      if (lookupError) {
+        console.error('[Team] Username lookup failed:', lookupError.message)
+        return NextResponse.json(
+          { error: 'Unable to look up that username' },
+          { status: 500 }
+        )
+      }
+
+      if (!invitee) {
+        return NextResponse.json(
+          { error: `No Career Brain account found for @${target.value}` },
+          { status: 404 }
+        )
+      }
+
+      // Only employer accounts can hold a company membership; the accept RPC
+      // enforces this too, but failing here gives a clearer message than an
+      // invite that can never be accepted.
+      if (invitee.role !== 'employer') {
+        return NextResponse.json(
+          { error: `@${target.value} is not an employer account` },
+          { status: 400 }
+        )
+      }
+
+      const { data: authUser, error: authError } =
+        await serviceSupabase.auth.admin.getUserById(invitee.id)
+
+      if (authError || !authUser?.user?.email) {
+        console.error('[Team] Could not resolve invitee email:', authError?.message)
+        return NextResponse.json(
+          { error: 'Unable to resolve that account' },
+          { status: 500 }
+        )
+      }
+
+      email = authUser.user.email.toLowerCase()
+      inviteeUserId = invitee.id
+    }
+
+    // Guard against inviting somebody who already sits on this team. Only
+    // checkable when the target resolved to a known account; a bare email that
+    // is not registered is caught when the invitee tries to accept.
+    if (inviteeUserId) {
+      const { data: existingMember } = await serviceSupabase
+        .from('company_members')
+        .select('id')
+        .eq('company_id', company.id)
+        .eq('user_id', inviteeUserId)
+        .eq('is_current', true)
+        .maybeSingle()
+
+      if (existingMember) {
+        return NextResponse.json(
+          { error: 'That person is already on your team' },
+          { status: 409 }
+        )
+      }
+    }
 
     const { count: pendingCount } = await serviceSupabase
       .from('company_invites')
@@ -198,8 +305,8 @@ export async function POST(request) {
       companyId: company.id,
       type: 'team',
       title: 'New teammate invited',
-      message: `${profile?.full_name || 'An admin'} invited ${email} to join as ${role}.`,
-      actionUrl: '/employer/dashboard',
+      message: `${profile?.full_name || 'An admin'} invited ${target.kind === 'username' ? `@${target.value}` : email} to join as ${role}.`,
+      actionUrl: '/employer/team',
       data: { invited_email: email, invited_role: role },
       excludeUserIds: [user.id],
     })
