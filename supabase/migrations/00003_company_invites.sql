@@ -88,8 +88,12 @@ ALTER TABLE public.company_invites
 -- One function, one transaction, row lock on the invite. This is the only
 -- supported way to join a company team.
 -- ---------------------------------------------------------------------------
+-- SETOF is required because the body ends in RETURN QUERY, which returns a
+-- set. A scalar `RETURNS public.company_members` cannot use RETURN QUERY and
+-- fails at creation with "cannot use RETURN QUERY in a non-SETOF function".
+-- The result is one row; callers read it as an array.
 CREATE OR REPLACE FUNCTION public.accept_company_invite(p_invite_id uuid)
-RETURNS public.company_members
+RETURNS SETOF public.company_members
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
