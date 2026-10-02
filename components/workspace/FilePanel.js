@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { theme } from '@/constants/colors'
+import { lightSelectStyle } from '@/lib/form-controls'
 
 const FILE_ICONS = {
   'image/png': '🖼️',
@@ -288,13 +289,14 @@ const [newNote, setNewNote] = useState({
       <select
   value={category}
   onChange={e => setCategory(e.target.value)}
-  style={{
+  style={lightSelectStyle({
     padding: '9px 12px',
     border: `1px solid ${theme.border.light}`,
     borderRadius: '8px',
     fontSize: '13px',
-    background: theme.bg.card,
-  }}
+    backgroundColor: theme.bg.card,
+    color: theme.text.primary,
+  })}
 >
   <option value="All">All</option>
   {CATEGORIES.map(cat => (
@@ -349,13 +351,14 @@ const [newNote, setNewNote] = useState({
         <select
   value={newNote.category}
   onChange={e => setNewNote(prev => ({ ...prev, category: e.target.value }))}
-  style={{
+  style={lightSelectStyle({
     padding: '9px 12px',
     border: `1px solid ${theme.border.light}`,
     borderRadius: '8px',
     fontSize: '13px',
-    background: theme.bg.card,
-  }}
+    backgroundColor: theme.bg.card,
+    color: theme.text.primary,
+  })}
 >
   {CATEGORIES.map(cat => (
     <option key={cat} value={cat}>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { lightSelectStyle } from '@/lib/form-controls'
 
 const CATEGORIES = [
   'Technical Skills',
@@ -175,16 +176,17 @@ export default function AddSkillButton() {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  style={{
+                  style={lightSelectStyle({
                     width: '100%',
                     padding: '10px 12px',
                     border: '1.5px solid #D1D5DB',
                     borderRadius: '9px',
                     fontSize: '13px',
-                    background: '#FFFFFF',
+                    backgroundColor: '#FFFFFF',
+                    color: '#111827',
                     outline: 'none',
                     boxSizing: 'border-box',
-                  }}
+                  })}
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>

@@ -304,3 +304,42 @@ video {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* ---------------------------------------------------------------------------
+   Light-themed dropdowns
+
+   The mirror of .app-select, for controls on white/slate-50 panels (the
+   opportunities filters, project forms, and the job seeker profile). Same
+   chevron geometry and focus ring so the two variants read as one control,
+   but a dark-grey chevron and `color-scheme: light` so the OS-drawn option
+   popup stays light.
+
+   Without `color-scheme` here, Windows paints the popup with its own default
+   and the control looks like an unstyled native dropdown.
+   --------------------------------------------------------------------------- */
+.app-select-light {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color-scheme: light;
+  cursor: pointer;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%2364748B' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.app-select-light option {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.app-select-light:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.45);
+  outline-offset: 1px;
+}
+
+.app-select-light:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

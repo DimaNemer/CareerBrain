@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { theme } from '@/constants/colors'
+import { lightSelectStyle } from '@/lib/form-controls'
 import { useRouter } from 'next/navigation'
 
 const COLUMNS = [
@@ -144,7 +145,7 @@ export default function TaskBoard({
             <select
               value={newTask.assigned_to}
               onChange={e => setNewTask(prev => ({ ...prev, assigned_to: e.target.value }))}
-              style={{ flex: '1 1 160px', minWidth: 0, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', background: theme.bg.card, color: theme.text.primary, cursor: 'pointer' }}
+              style={lightSelectStyle({ flex: '1 1 160px', minWidth: 0, padding: '9px 13px', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', backgroundColor: theme.bg.card, color: theme.text.primary })}
             >
               <option value="">Assign to... (optional)</option>
             {uniqueTeamMembers.map(tm => (
