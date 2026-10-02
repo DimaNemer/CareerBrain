@@ -48,6 +48,116 @@ video {
   display: none;
 }
 
+/* ---------------------------------------------------------------------------
+   Navigation bar
+
+   The bar is a single 60px flex row holding the brand, the search field, the
+   notification bell and the hamburger. On a 320px phone that row cannot fit,
+   so the brand was pushed off-screen and the whole document gained a
+   horizontal scrollbar.
+
+   --nav-h is the single source of truth for the bar's height. The drawer, its
+   backdrop and the notification panel all position themselves from it, which
+   is why they no longer hardcode 60px.
+
+   The notch inset is added on top of --nav-h rather than folded into it, so
+   every `top: var(--nav-offset)` still lines up with the bottom of the bar.
+   --------------------------------------------------------------------------- */
+:root {
+  --nav-h: 60px;
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  min-height: var(--nav-h);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /*
+   * Deliberately no `overflow` here. The search results panel and the
+   * notification panel are children that are meant to escape the 60px row.
+   * Setting either overflow axis would clip them, and pairing `clip` with
+   * `visible` makes the visible axis compute to `auto`/`clip` anyway, which
+   * turns the bar into a scroll container. The row is instead kept inside the
+   * viewport by letting the search field shrink and dropping the wordmark
+   * under 420px.
+   */
+}
+
+/* Offset for fixed children that must sit directly beneath the bar. */
+.navbar-offset {
+  top: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
+}
+
+/* The brand must be allowed to yield space before the search field does. */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Search field: the only part of the row allowed to shrink. */
+.navbar-search {
+  flex: 1;
+  min-width: 0;
+}
+
+.navbar-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 44x44 is the smallest reliably tappable target; the raw icon is 24px. */
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  color: inherit;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+/*
+ * The wordmark plus the search field do not both fit in a narrow phone: at
+ * 420px the field was left roughly 96px wide. Under 480px the mark alone
+ * carries the brand, which returns ~140px to the search.
+ */
+@media (max-width: 479px) {
+  .navbar-wordmark {
+    display: none;
+  }
+}
+
+/*
+ * iOS zooms the viewport when a focused field is under 16px, which then leaves
+ * the user scrolled into the middle of the page. The field is 13px on desktop
+ * where that does not happen.
+ */
+@media (max-width: 767px) {
+  .navbar-search input {
+    font-size: 16px;
+  }
+}
+
 /*
  * Notification bell.
  * The trigger had a 36px hit area and the 380px panel was anchored to a bell
@@ -76,11 +186,11 @@ video {
 }
 
 @media (max-width: 767px) {
-  /* Anchor to the viewport (the nav is sticky and 60px tall) so the panel
-     always stays inside the screen. */
+  /* Anchor to the viewport (the nav is sticky) so the panel always stays
+     inside the screen. Shares --nav-h with the drawer so they cannot drift. */
   .notification-dropdown {
     position: fixed;
-    top: 60px;
+    top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 4px);
     left: 12px;
     right: 12px;
     width: auto;

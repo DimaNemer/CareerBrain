@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {} from 'next/navigation'
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import NavLink from '@/components/NavLink'
@@ -57,16 +56,43 @@ export default function Navbar({
     }
   }, [open])
 
+  // The drawer covers the page but the page behind it still scrolled, and
+  // Escape did nothing. Lock the body and let Escape dismiss.
+  useEffect(() => {
+    if (!open) return
+
+    const previousOverflow =
+      document.body.style.overflow
+
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener(
+      'keydown',
+      handleKeyDown
+    )
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow
+
+      document.removeEventListener(
+        'keydown',
+        handleKeyDown
+      )
+    }
+  }, [open])
+
   const logo = (
     <Link
       href={isLoggedIn ? dashboardHref : '/'}
       onClick={close}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        textDecoration: 'none',
-      }}
+      className="navbar-brand"
     >
       <div
         style={{
@@ -78,12 +104,14 @@ export default function Navbar({
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
+          flexShrink: 0,
         }}
       >
         🧠
       </div>
 
       <span
+        className="navbar-wordmark"
         style={{
           fontWeight: 700,
           fontSize: '16px',
@@ -102,19 +130,9 @@ export default function Navbar({
       onClick={toggle}
       aria-label={open ? 'Close menu' : 'Open menu'}
       aria-expanded={open}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '8px',
-        marginLeft: '8px',
-        borderRadius: '8px',
-        color: theme.text.primary,
-        transition: 'background 0.15s',
-      }}
+      aria-controls="navbar-drawer"
+      className="navbar-icon-button"
+      style={{ color: theme.text.primary }}
       onMouseEnter={(e) => { e.currentTarget.style.background = theme.bg.hover }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
     >
@@ -124,30 +142,16 @@ export default function Navbar({
 
   return (
     <nav
-      className="px-4 md:px-6"
+      className="navbar px-4 md:px-6"
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
         background: theme.bg.card,
         borderBottom: `1px solid ${theme.border.light}`,
-        height: '60px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
       }}
     >
       {logo}
 
       {isLoggedIn ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            minWidth: 0,
-          }}
-        >
+        <div className="navbar-actions">
           {/* Desktop navigation (>= 768px) */}
           <div
             className="hidden md:flex"
@@ -181,13 +185,7 @@ export default function Navbar({
           </div>
 
           {/* Mobile search bar, next to the notification bell */}
-          <div
-            className="md:hidden"
-            style={{
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
+          <div className="navbar-search md:hidden">
             <UserSearch fullWidth />
           </div>
 
@@ -246,9 +244,9 @@ export default function Navbar({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={close}
+              className="navbar-offset"
               style={{
                 position: 'fixed',
-                top: '60px',
                 left: 0,
                 right: 0,
                 bottom: 0,
@@ -263,13 +261,14 @@ export default function Navbar({
           {open && (
             <motion.div
               key="nav-drawer"
+              id="navbar-drawer"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+              className="navbar-offset"
               style={{
                 position: 'fixed',
-                top: '60px',
                 right: 0,
                 bottom: 0,
                 width: 'min(300px, 82vw)',
@@ -278,9 +277,12 @@ export default function Navbar({
                 borderLeft: `1px solid ${theme.border.light}`,
                 boxShadow: '-12px 0 32px rgba(15,23,42,0.18)',
                 padding: '8px 16px 16px',
+                paddingBottom:
+                  'calc(16px + env(safe-area-inset-bottom, 0px))',
                 display: 'flex',
                 flexDirection: 'column',
                 overflowY: 'auto',
+                overscrollBehavior: 'contain',
               }}
             >
               {isLoggedIn ? (
