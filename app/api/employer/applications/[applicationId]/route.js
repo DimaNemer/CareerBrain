@@ -157,13 +157,16 @@ if (profileError) {
         return firstOrder - secondOrder
       }
     )
-    let resumeUrl = null
+ let resumeUrl = null
 
 if (application.cv_url) {
+  const serviceSupabase =
+    createServiceClient()
+
   const {
     data: signedResume,
     error: signedResumeError,
-  } = await supabase.storage
+  } = await serviceSupabase.storage
     .from('resumes')
     .createSignedUrl(
       application.cv_url,
@@ -176,10 +179,10 @@ if (application.cv_url) {
       signedResumeError.message
     )
   } else {
-    resumeUrl = signedResume?.signedUrl || null
+    resumeUrl =
+      signedResume?.signedUrl || null
   }
 }
-
 return NextResponse.json(
   {
     application: {

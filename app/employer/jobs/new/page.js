@@ -14,6 +14,7 @@ const initialForm = {
   requirements: '',
   salary_min: '',
   salary_max: '',
+  application_deadline: '',
   is_active: true,
 }
 
@@ -101,15 +102,17 @@ export default function CreateJobPage() {
       return
     }
 
-    const payload = {
-      title,
-      location: form.location.trim(),
-      employment_type: form.employment_type,
-      experience_level: form.experience_level,
-      description,
-      requirements: form.requirements.trim(),
-      is_active: form.is_active,
-    }
+   const payload = {
+  title,
+  location: form.location.trim(),
+  employment_type: form.employment_type,
+  experience_level: form.experience_level,
+  description,
+  requirements: form.requirements.trim(),
+  application_deadline:
+    form.application_deadline || null,
+  is_active: form.is_active,
+}
 
     /*
      * Add salary fields only when the employer entered them.
@@ -322,7 +325,27 @@ export default function CreateJobPage() {
                 </option>
               </select>
             </div>
+<div>
+  <label style={labelStyle}>
+    Application deadline
+  </label>
 
+  <input
+    name="application_deadline"
+    type="date"
+    value={form.application_deadline}
+    onChange={handleChange}
+    style={inputStyle}
+    onFocus={handleFocus}
+    onBlur={handleBlur}
+  />
+
+  <div style={helperRowStyle}>
+    <span style={helperTextStyle}>
+      Optional. Leave blank if applications should remain open until you close the job manually.
+    </span>
+  </div>
+</div>
             <div>
               <label style={labelStyle}>
                 Job description
