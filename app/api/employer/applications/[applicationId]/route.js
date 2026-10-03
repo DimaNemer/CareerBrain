@@ -331,8 +331,11 @@ if (updateError) {
       try {
         const serviceSupabase = createServiceClient()
 
-        // The applicant has no applications page of their own yet, so the
-        // bell links to their dashboard rather than a dead route.
+        /*
+         * Deep-links to the applicant's own tracker and highlights the exact
+         * application the decision refers to, so the notification lands on
+         * the row it is about rather than the top of a list.
+         */
         const { error: notifyError } = await serviceSupabase
           .from('notifications')
           .insert({
@@ -344,7 +347,9 @@ if (updateError) {
               : STATUS_COPY[newStatus].message,
             is_read: false,
             is_emailed: false,
-            action_url: '/dashboard',
+            action_url: `/my-applications?application=${
+              application.id
+            }`,
             data: {
               application_id: application.id,
               job_id: application.job_id,

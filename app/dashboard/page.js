@@ -181,13 +181,23 @@ const workspaceCompany = Array.isArray(
               : "Build your career profile to discover stronger job matches and personalised next steps."}
           </p>
         </div>
-        <Link
-          href="/profile"
-          className="inline-flex items-center gap-2 rounded-xl bg-background px-4 py-3 text-sm font-bold text-primary transition-transform hover:scale-[1.02]"
-        >
-          Improve my profile
-          <ArrowRight className="size-4" />
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/my-applications"
+            className="inline-flex items-center gap-2 rounded-xl bg-background px-4 py-3 text-sm font-bold text-primary transition-transform hover:scale-[1.02]"
+          >
+            My applications
+            <ArrowRight className="size-4" />
+          </Link>
+
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-2 rounded-xl bg-background px-4 py-3 text-sm font-bold text-primary transition-transform hover:scale-[1.02]"
+          >
+            Improve my profile
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </section>
 
       {/* Statistics */}

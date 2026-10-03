@@ -81,7 +81,9 @@ export async function POST(request) {
         message: `${copy.message} (${jobTitle})`,
         is_read: false,
         is_emailed: false,
-        action_url: '/dashboard',
+        action_url: body.application_id
+          ? `/my-applications?application=${body.application_id}`
+          : '/my-applications',
         data: {
           application_id: body.application_id || null,
           job_id: body.job_id || null,
