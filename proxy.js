@@ -52,9 +52,20 @@ export async function proxy(request) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+// getClaims() verifies the JWT locally against the project's signing keys, so
+  // it costs no network round trip. getUser() calls the Auth server on every
+  // single request, which added ~800ms to each one. Only `sub` is needed here.
+  // `data` is null when there is no session, so it cannot be destructured.
+  const { data: claimsData, error: claimsError } =
+    await supabase.auth.getClaims()
+
+  if (claimsError) {
+    console.error('Unable to read auth claims:', claimsError.message)
+  }
+
+  const user = claimsData?.claims?.sub
+    ? { id: claimsData.claims.sub }
+    : null
 
   const isProtectedRoute = PROTECTED_ROUTES.some(route =>
     pathname.startsWith(route)
@@ -75,21 +86,31 @@ export async function proxy(request) {
     )
   }
 if (user) {
-  const { data: profile, error: profileError } =
-    await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+  // The role only steers redirects and employer-route authorization. Reading it
+  // costs a database round trip, so skip it for every other route (including
+  // all /api/* calls), which only needs to know whether a user exists.
+  const needsRole =
+    isHomeRoute || isAuthRoute || pathname === '/dashboard' || isEmployerRoute
 
-  if (profileError) {
-    console.error(
-      'Unable to read user role:',
-      profileError.message
-    )
+  let role = null
+
+  if (needsRole) {
+    const { data: profile, error: profileError } =
+      await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+    if (profileError) {
+      console.error(
+        'Unable to read user role:',
+        profileError.message
+      )
+    }
+
+    role = profile?.role
   }
-
-  const role = profile?.role
 
  let companyMembership = null
 
