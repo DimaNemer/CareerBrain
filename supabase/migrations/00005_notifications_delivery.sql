@@ -90,13 +90,18 @@ BEGIN
 END
 $$;
 
--- Writes deliberately have no policy. Every write in the codebase goes
--- through lib/supabase-service.js (service role), which bypasses RLS. Leaving
--- INSERT/UPDATE/DELETE policy-free means a client holding only the anon key
--- cannot fabricate a notification for someone else.
+-- Writes deliberately have no policy. INSERT is only ever issued through
+-- lib/supabase-service.js (service role), which bypasses RLS, so a client
+-- holding just the anon key cannot fabricate a notification for someone else.
+--
+-- UPDATE and DELETE are a different case and DO need policies: these are issued
+-- by the *user-scoped* client in app/api/notifications/[id]/route.js and
+-- app/api/notifications/read-all/route.js, not the service role. Without an
+-- owner-scoped write policy RLS filters those statements to zero rows and
+-- "mark as read" / "delete" fail silently. See 00006 for those policies.
 --
 -- Note for local dev: app/api/notifications/test/route.js inserts with the
--- *user-scoped* client, so it will now be rejected by RLS. That is correct
+-- *user-scoped* client, so it will be rejected by RLS. That is correct
 -- behaviour, and the route is 404 in production anyway.
 --
 -- service_role retains full access regardless of these policies, so no
