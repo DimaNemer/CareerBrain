@@ -380,6 +380,7 @@ export default function OpportunitiesPage() {
   const renderJobCard = (opportunity, variant = 'default', index = 0) => {
     if (!opportunity?.id) return null
     const safeApplyUrl = getSafeUrl(opportunity.application_url)
+    const isInternalJob = opportunity.source === 'Employer'
     const targetDate = opportunity.posted_at || opportunity.created_at
     const daysAgoText = getDaysAgo(targetDate)
     const opportunitySkills = Array.isArray(opportunity.opportunity_skills) ? opportunity.opportunity_skills : []
@@ -482,8 +483,16 @@ export default function OpportunitiesPage() {
               )}
 
             </div>
-            {safeApplyUrl && (
-              <button onClick={(e) => handleApply(e, opportunity.id, safeApplyUrl)}
+            {(
+              <button onClick={(e) => {
+  e.stopPropagation()
+
+  if (safeApplyUrl) {
+    handleApply(e, opportunity.id, safeApplyUrl)
+  } else {
+    router.push(`/opportunities/${opportunity.id}`)
+  }
+}}
                 className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold no-underline transition-all duration-300 shadow-md hover:shadow-xl active:scale-[0.97] border-none cursor-pointer ${
                   appliedJobIds.has(opportunity.id)
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-100'

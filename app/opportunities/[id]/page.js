@@ -231,6 +231,17 @@ const requirementsList =
                 <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">{opportunity.description}</p>
               </div>
             )}
+            {opportunity.responsibilities && (
+  <div className="mb-8">
+    <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+      Key Responsibilities
+    </h2>
+
+    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">
+      {opportunity.responsibilities}
+    </p>
+  </div>
+)}
             {opportunity.is_employer_job && (
   <div className="mb-8">
     <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
@@ -285,6 +296,20 @@ const requirementsList =
           </p>
         </div>
       )}
+      {opportunity.application_deadline && (
+  <div>
+    <strong>Application Deadline: </strong>
+    <span>
+      {new Date(
+        `${opportunity.application_deadline}T00:00:00`
+      ).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+    </span>
+  </div>
+)}
     </div>
   </div>
 )}
@@ -313,7 +338,17 @@ const requirementsList =
     )}
   </div>
 )}
+{opportunity.preferred_qualifications && (
+  <div className="mb-8">
+    <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+      Preferred Qualifications
+    </h2>
 
+    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">
+      {opportunity.preferred_qualifications}
+    </p>
+  </div>
+)}
             {opportunitySkills.length > 0 && (
               <div className="mb-6">
                 <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Skills & Requirements</h2>

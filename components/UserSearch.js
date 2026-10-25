@@ -16,6 +16,7 @@ export default function UserSearch({
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
+  const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState(-1)
@@ -56,6 +57,12 @@ export default function UserSearch({
       }
 
       const data = await response.json()
+
+      setCompanies(
+  Array.isArray(data.companies)
+    ? data.companies
+    : []
+)
 
       setResults(
         Array.isArray(data.users)
@@ -119,21 +126,22 @@ export default function UserSearch({
     }
   }, [])
 
-  function navigateTo(result) {
-    if (!result?.id) return
+function navigateTo(result) {
+  if (!result?.id) return
 
-    setOpen(false)
-    setQuery('')
-    setResults([])
-    setSelected(-1)
+  setOpen(false)
+  setQuery('')
+  setResults([])
+  setCompanies([])
+  setSelected(-1)
 
-    if (result.role === 'employer') {
-      router.push(`/company/${result.id}`)
-      return
-    }
-
-    router.push(`/profile/${result.id}`)
+  if (result.type === 'company') {
+    router.push(`/company/${result.id}`)
+    return
   }
+
+  router.push(`/profile/${result.id}`)
+}
 
   function handleKeyDown(event) {
     if (event.key === 'ArrowDown') {
@@ -187,7 +195,29 @@ export default function UserSearch({
     setLoading(false)
     inputRef.current?.focus()
   }
+const searchResults = [
+  ...companies.map(company => ({
+    id: company.id,
+    type: 'company',
+    displayName: company.name,
+    displaySubtitle:
+      [company.industry, company.location]
+        .filter(Boolean)
+        .join(' · ') || 'Company',
+    displayImage: company.logo_url,
+  })),
 
+  ...results.map(person => ({
+    ...person,
+    type: 'person',
+    displayName: person.full_name || person.username || 'Unknown',
+    displaySubtitle:
+      person.headline ||
+      person.employer_headline ||
+      (person.role === 'employer' ? 'Employer' : 'Job seeker'),
+    displayImage: person.avatar_url,
+  })),
+]
   const showDropdown =
     open && query.trim().length >= 2
 
@@ -397,36 +427,15 @@ export default function UserSearch({
                 overflowY: 'auto',
               }}
             >
-              {results.map(
+              {searchResults.map(
                 (result, index) => {
-                  const isEmployer =
-                    result.role ===
-                    'employer'
+                const isEmployer = result.type === 'company'
 
-                  const displayName =
-                    isEmployer
-                      ? result.company_name ||
-                        result.full_name ||
-                        'Company'
-                      : result.full_name ||
-                        'Unknown'
+const displayName = result.displayName
 
-                  const displaySubtitle =
-                    isEmployer
-                      ? result.employer_headline ||
-                        result.company_industry ||
-                        result.company_location ||
-                        'Employer'
-                      : result.headline ||
-                        `@${
-                          result.username ||
-                          'user'
-                        }`
+const displaySubtitle = result.displaySubtitle
 
-                  const displayImage =
-                    isEmployer
-                      ? result.company_logo_url
-                      : result.avatar_url
+const displayImage = result.displayImage
 
                   const initials =
                     displayName

@@ -148,15 +148,18 @@ export async function POST(request) {
 }
 
     const body = await request.json()
-  const {
+const {
   title,
   location,
   employment_type,
   experience_level,
   description,
+  responsibilities,
   requirements,
+  preferred_qualifications,
   salary_min,
   salary_max,
+  application_deadline,
   is_active,
 
   require_resume = true,
@@ -179,6 +182,27 @@ export async function POST(request) {
     if (description.trim().length < 50) {
       return NextResponse.json({ error: 'Description must be at least 50 characters' }, { status: 400 })
     }
+    const optionalTextFields = {
+  responsibilities,
+  requirements,
+  preferred_qualifications,
+}
+
+for (const [field, value] of Object.entries(optionalTextFields)) {
+  if (value != null && typeof value !== 'string') {
+    return NextResponse.json(
+      { error: `${field} must be text` },
+      { status: 400 }
+    )
+  }
+
+  if (typeof value === 'string' && value.length > 5000) {
+    return NextResponse.json(
+      { error: `${field} must be under 5000 characters` },
+      { status: 400 }
+    )
+  }
+}
     if (employment_type && !VALID_EMPLOYMENT_TYPES.includes(employment_type)) {
       return NextResponse.json({ error: 'Invalid employment type' }, { status: 400 })
     }
@@ -301,12 +325,16 @@ company_name: company.name || 'Company',
         employment_type: employment_type || null,
         experience_level: experience_level || null,
         description: description.trim(),
-        requirements: requirements?.trim() || null,
+responsibilities: responsibilities?.trim() || null,
+requirements: requirements?.trim() || null,
+preferred_qualifications:
+  preferred_qualifications?.trim() || null,
        salary_min:
   salary_min !== undefined ? salary_min : null,
 
 salary_max:
   salary_max !== undefined ? salary_max : null,
+  application_deadline: application_deadline || null,
         is_active: is_active !== false,
         require_resume,
 cover_letter_requirement,
@@ -383,7 +411,18 @@ if (questions.length > 0) {
   },
   { status: 201 }
 )
-  } catch {
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
-  }
+} catch (error) {
+  console.error('CREATE JOB ERROR:', error)
+
+  return NextResponse.json(
+    {
+      error: 'Something went wrong',
+      details:
+        process.env.NODE_ENV === 'development'
+          ? error?.message || String(error)
+          : undefined,
+    },
+    { status: 500 }
+  )
+}
 }

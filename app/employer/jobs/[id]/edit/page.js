@@ -13,10 +13,13 @@ const initialForm = {
   location: '',
   employment_type: '',
   experience_level: '',
-  description: '',
-  requirements: '',
+description: '',
+responsibilities: '',
+requirements: '',
+preferred_qualifications: '',
   salary_min: '',
   salary_max: '',
+  application_deadline: '',
   is_active: true,
 
   require_resume: true,
@@ -59,8 +62,10 @@ export default function EditJobPage() {
             job.employment_type || '',
           experience_level:
             job.experience_level || '',
-          description: job.description || '',
-          requirements: job.requirements || '',
+         description: job.description || '',
+responsibilities: job.responsibilities || '',
+requirements: job.requirements || '',
+preferred_qualifications: job.preferred_qualifications || '',
 
           salary_min:
             job.salary_min === null ||
@@ -73,7 +78,7 @@ export default function EditJobPage() {
             job.salary_max === undefined
               ? ''
               : String(job.salary_max),
-
+application_deadline: job.application_deadline || '',
           is_active: job.is_active !== false,
 
           require_resume:
@@ -214,12 +219,14 @@ export default function EditJobPage() {
       experience_level:
         form.experience_level,
       description,
-      requirements:
-        form.requirements.trim(),
+responsibilities: form.responsibilities.trim(),
+requirements: form.requirements.trim(),
+preferred_qualifications:
+  form.preferred_qualifications.trim(),
 
-      salary_min: minimumSalary,
-      salary_max: maximumSalary,
-
+     salary_min: minimumSalary,
+salary_max: maximumSalary,
+application_deadline: form.application_deadline || null,
       is_active: form.is_active,
 
       require_resume:
@@ -488,6 +495,34 @@ export default function EditJobPage() {
               </div>
             </div>
 
+<div>
+  <label style={labelStyle}>
+    Key Responsibilities
+  </label>
+
+  <textarea
+    name="responsibilities"
+    maxLength={5000}
+    value={form.responsibilities}
+    onChange={handleChange}
+    placeholder={`e.g.
+• Develop and execute test cases
+• Identify and report bugs
+• Collaborate with developers`}
+    rows={7}
+    style={textareaStyle}
+  />
+
+  <div style={helperRowStyle}>
+    <span style={helperTextStyle}>
+      Optional. Add one responsibility per line.
+    </span>
+
+    <span style={helperTextStyle}>
+      {form.responsibilities.length}/5000
+    </span>
+  </div>
+</div>
             <div>
               <label style={labelStyle}>
                 Requirements
@@ -516,7 +551,34 @@ export default function EditJobPage() {
                 </span>
               </div>
             </div>
+<div>
+  <label style={labelStyle}>
+    Preferred Qualifications
+  </label>
 
+  <textarea
+    name="preferred_qualifications"
+    maxLength={5000}
+    value={form.preferred_qualifications}
+    onChange={handleChange}
+    placeholder={`e.g.
+• Experience with Cypress or Playwright
+• Familiarity with GitHub Actions
+• ISTQB certification`}
+    rows={7}
+    style={textareaStyle}
+  />
+
+  <div style={helperRowStyle}>
+    <span style={helperTextStyle}>
+      Optional. Add nice-to-have qualifications.
+    </span>
+
+    <span style={helperTextStyle}>
+      {form.preferred_qualifications.length}/5000
+    </span>
+  </div>
+</div>
             <div>
               <h2 style={sectionHeadingStyle}>
                 Salary range
@@ -564,7 +626,23 @@ export default function EditJobPage() {
                 </div>
               </div>
             </div>
+<div>
+  <label style={labelStyle}>
+    Application Deadline
+  </label>
 
+  <input
+    type="date"
+    name="application_deadline"
+    value={form.application_deadline}
+    onChange={handleChange}
+    style={inputStyle}
+  />
+
+  <p style={helperTextStyle}>
+    Optional. Leave empty if applications have no deadline.
+  </p>
+</div>
             <div style={dividerStyle} />
 
             <div>

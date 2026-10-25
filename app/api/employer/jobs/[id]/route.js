@@ -144,9 +144,12 @@ const { data: existing } = await supabase
   employment_type,
   experience_level,
   description,
-  requirements,
-  salary_min,
+responsibilities,
+requirements,
+preferred_qualifications,
+salary_min,
   salary_max,
+  application_deadline,
   is_active,
   require_resume,
   cover_letter_requirement,
@@ -175,20 +178,51 @@ const { data: existing } = await supabase
       }
     }
 
+    for (const [field, value] of Object.entries({
+  responsibilities,
+  preferred_qualifications,
+})) {
+  if (value !== undefined && value !== null && typeof value !== 'string') {
+    return NextResponse.json(
+      { error: `${field} must be text` },
+      { status: 400 }
+    )
+  }
+
+  if (typeof value === 'string' && value.length > 5000) {
+    return NextResponse.json(
+      { error: `${field} must not exceed 5000 characters` },
+      { status: 400 }
+    )
+  }
+}
     // Build updates object — only include fields that were sent
     const updates = {}
     if (title !== undefined) updates.title = title.trim()
     if (location !== undefined) updates.location = location?.trim() || null
     if (employment_type !== undefined) updates.employment_type = employment_type || null
     if (experience_level !== undefined) updates.experience_level = experience_level || null
-    if (description !== undefined) updates.description = description.trim()
-    if (requirements !== undefined) updates.requirements = requirements?.trim() || null
+    if (description !== undefined)
+  updates.description = description.trim()
+
+if (responsibilities !== undefined)
+  updates.responsibilities = responsibilities?.trim() || null
+
+if (requirements !== undefined)
+  updates.requirements = requirements?.trim() || null
+
+if (preferred_qualifications !== undefined)
+  updates.preferred_qualifications =
+    preferred_qualifications?.trim() || null
     if (salary_min !== undefined) 
   updates.salary_min =
     salary_min === null ? null : salary_min
     if (salary_max !== undefined) 
   updates.salary_max =
     salary_max === null ? null : salary_max
+    if (application_deadline !== undefined) {
+  updates.application_deadline = application_deadline || null
+}
     if (is_active !== undefined) updates.is_active = is_active
     if (require_resume !== undefined) {
   updates.require_resume = require_resume

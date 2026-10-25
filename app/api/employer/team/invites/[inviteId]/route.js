@@ -12,10 +12,7 @@ import { sendCompanyNotificationToMembers } from '@/lib/company-notifications'
 const ACCEPT_ERRORS = {
   'Invite is not available': { status: 404, error: 'That invite no longer exists' },
   'Invite has expired': { status: 410, error: 'That invite has expired' },
-  'Only employer accounts can join a company team': {
-    status: 403,
-    error: 'Only employer accounts can join a company team',
-  },
+ 
   'You already belong to a company': {
     status: 409,
     error: 'Leave your current company workspace before joining another',

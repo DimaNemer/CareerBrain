@@ -235,13 +235,18 @@ export async function DELETE(request, { params }) {
         )
       }
     }
+// Soft remove: revoke company access and record the departure date.
+const today = new Date().toISOString().slice(0, 10)
 
-    // Soft remove: keeps historical rows (job ownership, etc.) intact.
-    const { error: removeError } = await serviceSupabase
-      .from('company_members')
-      .update({ is_current: false })
-      .eq('id', memberId)
-      .eq('company_id', company.id)
+const { error: removeError } = await serviceSupabase
+  .from('company_members')
+  .update({
+    is_current: false,
+    ended_at: today,
+  })
+  .eq('id', memberId)
+  .eq('company_id', company.id)
+  .eq('is_current', true)
 
     if (removeError) {
       console.error('[Team] Remove failed:', removeError.message)

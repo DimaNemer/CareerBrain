@@ -218,12 +218,7 @@ export async function POST(request) {
       // Only employer accounts can hold a company membership; the accept RPC
       // enforces this too, but failing here gives a clearer message than an
       // invite that can never be accepted.
-      if (invitee.role !== 'employer') {
-        return NextResponse.json(
-          { error: `@${target.value} is not an employer account` },
-          { status: 400 }
-        )
-      }
+   
 
       const { data: authUser, error: authError } =
         await serviceSupabase.auth.admin.getUserById(invitee.id)

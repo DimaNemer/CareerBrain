@@ -17,36 +17,27 @@ export default async function EmployerTeamPage() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'employer') {
-    redirect('/dashboard')
-  }
 
   // Company is resolved from the caller's own membership, never from a
   // route parameter, so this page cannot be pointed at another company.
-  const { data: membership } = await supabase
-    .from('company_members')
-    .select(`
-      company_id,
-      role,
-      job_title,
-      companies (
-        id,
-        name
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('is_current', true)
-    .maybeSingle()
+ const { data: membership } = await supabase
+  .from('company_members')
+  .select(`
+    company_id,
+    role,
+    job_title,
+    companies (
+      id,
+      name
+    )
+  `)
+  .eq('user_id', user.id)
+  .eq('is_current', true)
+  .maybeSingle()
 
-  if (!membership) {
-    redirect('/dashboard')
-  }
+if (!membership) {
+  redirect('/dashboard')
+}
 
   const company = Array.isArray(membership.companies)
     ? membership.companies[0]

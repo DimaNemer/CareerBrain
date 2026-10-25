@@ -10,8 +10,10 @@ const initialForm = {
   location: '',
   employment_type: '',
   experience_level: '',
-  description: '',
-  requirements: '',
+description: '',
+responsibilities: '',
+requirements: '',
+preferred_qualifications: '',
   salary_min: '',
   salary_max: '',
   application_deadline: '',
@@ -108,7 +110,9 @@ export default function CreateJobPage() {
   employment_type: form.employment_type,
   experience_level: form.experience_level,
   description,
-  requirements: form.requirements.trim(),
+responsibilities: form.responsibilities.trim(),
+requirements: form.requirements.trim(),
+preferred_qualifications: form.preferred_qualifications.trim(),
   application_deadline:
     form.application_deadline || null,
   is_active: form.is_active,
@@ -376,7 +380,36 @@ export default function CreateJobPage() {
                 </span>
               </div>
             </div>
+<div>
+  <label style={labelStyle}>
+    Key Responsibilities
+  </label>
 
+  <textarea
+    name="responsibilities"
+    maxLength={5000}
+    value={form.responsibilities}
+    onChange={handleChange}
+    placeholder={`e.g.
+• Analyze business data
+• Create dashboards and reports
+• Collaborate with different teams`}
+    rows={7}
+    style={textareaStyle}
+    onFocus={handleFocus}
+    onBlur={handleBlur}
+  />
+
+  <div style={helperRowStyle}>
+    <span style={helperTextStyle}>
+      Optional. Add the main duties of this role.
+    </span>
+
+    <span style={helperTextStyle}>
+      {form.responsibilities.length}/5000
+    </span>
+  </div>
+</div>
             <div>
               <label style={labelStyle}>
                 Requirements
@@ -407,7 +440,36 @@ export default function CreateJobPage() {
                 </span>
               </div>
             </div>
+<div>
+  <label style={labelStyle}>
+    Preferred Qualifications
+  </label>
 
+  <textarea
+    name="preferred_qualifications"
+    maxLength={5000}
+    value={form.preferred_qualifications}
+    onChange={handleChange}
+    placeholder={`e.g.
+• Experience with Power BI
+• Familiarity with Python
+• Previous internship experience`}
+    rows={7}
+    style={textareaStyle}
+    onFocus={handleFocus}
+    onBlur={handleBlur}
+  />
+
+  <div style={helperRowStyle}>
+    <span style={helperTextStyle}>
+      Optional. Add nice-to-have qualifications.
+    </span>
+
+    <span style={helperTextStyle}>
+      {form.preferred_qualifications.length}/5000
+    </span>
+  </div>
+</div>
             <div>
               <div style={sectionHeadingStyle}>
                 Salary range
