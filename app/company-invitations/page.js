@@ -17,113 +17,72 @@ export default function CompanyInvitationsPage() {
 
     async function loadInvitations() {
       try {
-        const response = await fetch(
-          '/api/company-invitations',
-          {
-            method: 'GET',
-            cache: 'no-store',
-          }
-        )
+        // Fetch from both invite systems in parallel
+        const [oldRes, newRes] = await Promise.all([
+          fetch('/api/company-invitations', { method: 'GET', cache: 'no-store' }),
+          fetch('/api/employer/team/invites/mine', { method: 'GET', cache: 'no-store' }),
+        ])
 
-        const data = await response.json()
+        const [oldData, newData] = await Promise.all([
+          oldRes.json(),
+          newRes.json(),
+        ])
 
         if (cancelled) return
 
-        if (!response.ok) {
-          setError(
-            data.error ||
-              'Unable to load company invitations'
-          )
-          return
-        }
+        const oldInvites = (oldData.invitations || []).map(inv => ({ ...inv, _source: 'old' }))
+        const newInvites = (newData.invites || []).map(inv => ({ ...inv, _source: 'new' }))
 
-        setInvitations(
-          data.invitations || []
-        )
+        setInvitations([...newInvites, ...oldInvites])
       } catch (error) {
         if (cancelled) return
-
-        console.error(
-          'Invitation page load error:',
-          error
-        )
-
-        setError(
-          'Unable to load company invitations'
-        )
+        console.error('Invitation page load error:', error)
+        setError('Unable to load company invitations')
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadInvitations()
 
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
-  async function handleInvitationAction(
-    invitationId,
-    action
-  ) {
+  async function handleInvitationAction(invitationId, action, source) {
     setActionLoadingId(invitationId)
     setError('')
     setSuccessMessage('')
 
     try {
-      const response = await fetch(
-        `/api/company-invitations/${invitationId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            action,
-          }),
-        }
-      )
+      // Route to the correct API based on which invite system created this invite
+      const url = source === 'new'
+        ? `/api/employer/team/invites/${invitationId}`
+        : `/api/company-invitations/${invitationId}`
+      const method = source === 'new' ? 'POST' : 'PUT'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
 
       const data = await response.json()
 
       if (!response.ok) {
-        setError(
-          data.error ||
-            'Unable to update invitation'
-        )
+        setError(data.error || 'Unable to update invitation')
         return
       }
 
-      setInvitations(previous =>
-        previous.filter(
-          invitation =>
-            invitation.id !==
-            invitationId
-        )
-      )
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId))
 
       if (action === 'accept') {
-        setSuccessMessage(
-          'Invitation accepted successfully. You are now part of the company.'
-        )
+        setSuccessMessage('Invitation accepted successfully. You are now part of the company.')
       } else {
-        setSuccessMessage(
-          'Invitation declined.'
-        )
+        setSuccessMessage('Invitation declined.')
       }
     } catch (error) {
-      console.error(
-        'Invitation action error:',
-        error
-      )
-
-      setError(
-        'Unable to update invitation'
-      )
+      console.error('Invitation action error:', error)
+      setError('Unable to update invitation')
     } finally {
       setActionLoadingId(null)
     }
@@ -357,7 +316,8 @@ export default function CompanyInvitationsPage() {
                         onClick={() =>
                           handleInvitationAction(
                             invitation.id,
-                            'decline'
+                            'decline',
+                            invitation._source
                           )
                         }
                         disabled={isLoading}
@@ -378,7 +338,8 @@ export default function CompanyInvitationsPage() {
                         onClick={() =>
                           handleInvitationAction(
                             invitation.id,
-                            'accept'
+                            'accept',
+                            invitation._source
                           )
                         }
                         disabled={isLoading}

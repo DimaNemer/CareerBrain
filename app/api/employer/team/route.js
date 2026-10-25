@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createServiceClient } from '@/lib/supabase-service'
 import { requireEmployer, isCompanyAdmin } from '@/lib/employer-auth'
-import { sendCompanyNotificationToMembers } from '@/lib/company-notifications'
+import { sendCompanyNotificationToMembers, sendInviteNotificationToUser } from '@/lib/company-notifications'
 
 const VALID_ROLES = ['owner', 'admin', 'recruiter', 'viewer']
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -293,6 +293,25 @@ export async function POST(request) {
         { error: 'Unable to send that invite' },
         { status: 500 }
       )
+    }
+
+    // Notify the invitee in their notification bell if we resolved their account.
+    // This is only possible when the employer invited by username (not a bare email
+    // that may not be registered yet).
+    if (inviteeUserId) {
+      const { data: companyRow } = await serviceSupabase
+        .from('companies')
+        .select('name')
+        .eq('id', company.id)
+        .maybeSingle()
+
+      await sendInviteNotificationToUser({
+        recipientId: inviteeUserId,
+        companyId: company.id,
+        companyName: companyRow?.name || 'a company',
+        inviterName: profile?.full_name || profile?.username || 'An admin',
+        role,
+      })
     }
 
     // Let the current team know someone was invited.

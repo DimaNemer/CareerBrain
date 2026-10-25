@@ -75,12 +75,14 @@ export async function POST(request, { params }) {
       // someone else's invite.
       const userEmail = user.email?.trim().toLowerCase()
 
-      const { error: declineError } = await serviceSupabase
+      const { data: inviteRow, error: declineError } = await serviceSupabase
         .from('company_invites')
         .update({ status: 'declined', responded_at: new Date().toISOString() })
         .eq('id', inviteId)
         .eq('status', 'pending')
         .eq('email', userEmail)
+        .select('company_id, role')
+        .maybeSingle()
 
       if (declineError) {
         console.error('[Team invite] Decline failed:', declineError.message)
@@ -88,6 +90,21 @@ export async function POST(request, { params }) {
           { error: 'Unable to decline that invite' },
           { status: 500 }
         )
+      }
+
+      if (inviteRow?.company_id) {
+        await sendCompanyNotificationToMembers({
+          companyId: inviteRow.company_id,
+          type: 'team',
+          title: 'Invitation declined',
+          message: `${user.email} declined the invitation to join as ${inviteRow.role}.`,
+          actionUrl: '/employer/team',
+          data: {
+            declined_email: user.email,
+            declined_role: inviteRow.role,
+          },
+          excludeUserIds: [user.id],
+        })
       }
 
       return NextResponse.json({ message: 'Invite declined' }, { status: 200 })

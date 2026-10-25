@@ -13,6 +13,7 @@ const typeColors = {
   team: { bg: '#F0F9FF', border: '#BAE6FD', icon: '👥', accent: '#0284C7' },
   message: { bg: theme.bg.indigoSoft, border: theme.border.indigo, icon: '💬', accent: theme.text.indigo },
   company_post: { bg: theme.bg.card, border: theme.border.light, icon: '📢', accent: theme.text.secondary },
+  company_invite: { bg: theme.bg.indigoSoft, border: theme.border.indigo, icon: '🏢', accent: theme.text.indigo },
   general: { bg: theme.bg.card, border: theme.border.light, icon: '🔔', accent: theme.text.secondary },
 }
 
