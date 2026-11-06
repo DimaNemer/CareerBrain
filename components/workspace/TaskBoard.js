@@ -33,6 +33,9 @@ export default function TaskBoard({
   }
 
   async function updateTaskStatus(taskId, newStatus) {
+    const previousTask = tasks.find(task => task.id === taskId)
+    if (!previousTask || previousTask.status === newStatus) return
+
     setTasks(prev =>
       prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
     )
@@ -44,10 +47,25 @@ export default function TaskBoard({
       })
       if (!res.ok) {
         const data = await res.json()
+        setTasks(prev =>
+          prev.map(task =>
+            task.id === taskId
+              ? { ...task, status: previousTask.status }
+              : task
+          )
+        )
         setError(data.error || 'Failed to update task')
+        return
       }
       router.refresh()
     } catch {
+      setTasks(prev =>
+        prev.map(task =>
+          task.id === taskId
+            ? { ...task, status: previousTask.status }
+            : task
+        )
+      )
       setError('Failed to update task')
     }
     

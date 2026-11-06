@@ -14,6 +14,8 @@ export default async function WorkspacePage({ params, searchParams }) {
   const supabase = await createClient()
   const { id: projectId } = await params
   const activeTab = (await searchParams)?.tab || 'tasks'
+  const shouldLoadTasks =
+    activeTab === 'tasks' || activeTab === 'overview'
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -39,48 +41,58 @@ export default async function WorkspacePage({ params, searchParams }) {
 
   if (!isOwner && !member) redirect('/projects')
 
-const { data: currentUserProfile } = await supabase
-  .from('profiles')
-  .select('id, full_name, username, avatar_url')
-  .eq('id', user.id)
-  .single()
-
-const { data: ownerProfile } = await supabase
-  .from('profiles')
-  .select('id, full_name, username, avatar_url')
-  .eq('id', project.owner_id)
-  .single()
-  const { data: tasks } = await supabase
-    .from('tasks')
+const [
+  { data: currentUserProfile },
+  { data: ownerProfile },
+  { data: tasks },
+  { data: teamMembers = [] },
+  { data: completionRequest },
+] = await Promise.all([
+  activeTab === 'tasks'
+    ? supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .eq('id', user.id)
+        .single()
+    : Promise.resolve({ data: null }),
+  supabase
+    .from('profiles')
+    .select('id, full_name, username, avatar_url')
+    .eq('id', project.owner_id)
+    .single(),
+  shouldLoadTasks
+    ? supabase
+        .from('tasks')
+        .select(`
+          id, title, description, status, due_date, created_at, assigned_to,
+          profiles!tasks_assigned_to_fkey ( id, full_name, username, avatar_url )
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true })
+    : Promise.resolve({ data: [] }),
+  supabase
+    .from('project_members')
     .select(`
-      id, title, description, status, due_date, created_at, assigned_to,
-      profiles!tasks_assigned_to_fkey ( id, full_name, username, avatar_url )
+      id,
+      user_id,
+      role_in_project,
+      joined_at,
+      profiles (
+        id,
+        full_name,
+        username,
+        avatar_url
+      )
     `)
     .eq('project_id', projectId)
-    .order('created_at', { ascending: true })
-const { data: teamMembers = [] } = await supabase
-  .from('project_members')
-  .select(`
-    id,
-    user_id,
-    role_in_project,
-    joined_at,
-    profiles (
-      id,
-      full_name,
-      username,
-      avatar_url
-    )
-  `)
-  .eq('project_id', projectId)
-  .is('left_at', null)
-
-  const { data: completionRequest } = await supabase
+    .is('left_at', null),
+  supabase
     .from('completion_requests')
     .select('id, status, required_confirmations')
     .eq('project_id', projectId)
     .eq('status', 'pending')
-    .maybeSingle()
+    .maybeSingle(),
+])
 
   // Add owner to team display if not already in members
 const ownerEntry = ownerProfile

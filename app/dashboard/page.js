@@ -1,7 +1,6 @@
 import Link from "next/link"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@/lib/supabase-server"
 import {
   CheckCircle2,
   ArrowRight,
@@ -13,30 +12,6 @@ import {
   FileText,
   User,
 } from "lucide-react"
-
-// ---- Supabase config ----
-// The publishable (anon) key is safe to expose in client-reachable code.
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://fyxppahiuwxwrbjtqmam.supabase.co"
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_HTqXN9K174N8dI-Ms1vf_A_nFlnCUeN"
-
-// ---- Supabase server client ----
-async function createClient() {
-  const cookieStore = await cookies()
-  return createServerClient(SUPABASE_URL, SUPABASE_KEY, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll()
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        } catch {
-          // Called from a Server Component — safe to ignore when middleware refreshes sessions.
-        }
-      },
-    },
-  })
-}
 
 // ---- Page ----
 export default async function DashboardPage() {

@@ -9,6 +9,7 @@ export default async function PublicCompanyProfilePage({
 }) {
 const publicSupabase = createServiceClient()
 const supabase = await createClient()
+const viewerPromise = supabase.auth.getUser()
 
   const { id } = await params
   const resolvedSearchParams = await searchParams
@@ -53,27 +54,15 @@ if (!company) {
 }
 const {
   data: { user: viewer },
-} = await supabase.auth.getUser()
+} = await viewerPromise
 
-let canEditCompany = false
-
-if (viewer) {
-  const { data: viewerMembership } = await publicSupabase
-    .from('company_members')
-    .select('role')
-    .eq('company_id', company.id)
-    .eq('user_id', viewer.id)
-    .eq('is_current', true)
-    .maybeSingle()
-
-  canEditCompany =
-    viewerMembership?.role === 'owner' ||
-    viewerMembership?.role === 'admin'
-}
-  const {
-    data: jobs,
-    error: jobsError,
-  } = await publicSupabase
+const [
+  { data: jobs, error: jobsError },
+  { data: posts, error: postsError },
+  { data: members, error: membersError },
+  { data: viewerMembership },
+] = await Promise.all([
+  publicSupabase
     .from('job_postings')
     .select(`
       id,
@@ -91,19 +80,8 @@ if (viewer) {
     .eq('is_active', true)
     .order('created_at', {
       ascending: false,
-    })
-
-  if (jobsError) {
-    console.error(
-      'Public company jobs error:',
-      jobsError.message
-    )
-  }
-
-  const {
-    data: posts,
-    error: postsError,
-  } = await publicSupabase
+    }),
+  publicSupabase
     .from('company_posts')
     .select(`
       id,
@@ -116,7 +94,44 @@ if (viewer) {
     .eq('company_id', company.id)
     .order('created_at', {
       ascending: false,
-    })
+    }),
+  publicSupabase
+    .from('company_members')
+    .select(`
+      id,
+      user_id,
+      job_title,
+      role,
+      profiles (
+        id,
+        full_name,
+        username,
+        headline,
+        location
+      )
+    `)
+    .eq('company_id', company.id)
+    .eq('is_current', true)
+    .order('created_at', {
+      ascending: true,
+    }),
+  viewer
+    ? publicSupabase
+        .from('company_members')
+        .select('role')
+        .eq('company_id', company.id)
+        .eq('user_id', viewer.id)
+        .eq('is_current', true)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null }),
+])
+
+  if (jobsError) {
+    console.error(
+      'Public company jobs error:',
+      jobsError.message
+    )
+  }
 
   if (postsError) {
     console.error(
@@ -124,30 +139,6 @@ if (viewer) {
       postsError.message
     )
   }
-
-const {
-  data: members,
-  error: membersError,
-} = await publicSupabase
-  .from('company_members')
-  .select(`
-    id,
-    user_id,
-    job_title,
-    role,
-    profiles (
-      id,
-      full_name,
-      username,
-      headline,
-      location
-    )
-  `)
-  .eq('company_id', company.id)
-  .eq('is_current', true)
-  .order('created_at', {
-    ascending: true,
-  })
 
 if (membersError) {
   console.error(
@@ -157,6 +148,9 @@ if (membersError) {
 }
 
 const safeMembers = membersError ? [] : members || []
+const canEditCompany =
+  viewerMembership?.role === 'owner' ||
+  viewerMembership?.role === 'admin'
 
 const ownerMembership =
   safeMembers.find(member => member.role === 'owner') ||

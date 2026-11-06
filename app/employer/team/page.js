@@ -47,24 +47,38 @@ if (!membership) {
     redirect('/dashboard')
   }
 
-  const { data: members, error: membersError } = await supabase
-    .from('company_members')
-    .select(`
-      id,
-      user_id,
-      role,
-      job_title,
-      created_at,
-      profiles (
+  const canManage = ['owner', 'admin'].includes(membership.role)
+  const [
+    { data: members, error: membersError },
+    { data: inviteRows, error: invitesError },
+  ] = await Promise.all([
+    supabase
+      .from('company_members')
+      .select(`
         id,
-        full_name,
-        username,
-        avatar_url
-      )
-    `)
-    .eq('company_id', company.id)
-    .eq('is_current', true)
-    .order('created_at', { ascending: true })
+        user_id,
+        role,
+        job_title,
+        created_at,
+        profiles (
+          id,
+          full_name,
+          username,
+          avatar_url
+        )
+      `)
+      .eq('company_id', company.id)
+      .eq('is_current', true)
+      .order('created_at', { ascending: true }),
+    canManage
+      ? supabase
+          .from('company_invites')
+          .select('id, email, role, job_title, status, created_at')
+          .eq('company_id', company.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ])
 
   if (membersError) {
     console.error(
@@ -74,28 +88,17 @@ if (!membership) {
   }
 
   const safeMembers = members || []
-  const canManage = ['owner', 'admin'].includes(membership.role)
 
   // Pending invite emails are only exposed to admins, matching the API.
-  let pendingInvites = []
+  let pendingInvites = inviteRows || []
 
-  if (canManage) {
-    const { data: inviteRows, error: invitesError } = await supabase
-      .from('company_invites')
-      .select('id, email, role, job_title, status, created_at')
-      .eq('company_id', company.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-
-    if (invitesError) {
-      // Expected until supabase/migrations/00003_company_invites.sql is applied.
-      console.error(
-        'Employer pending invites error:',
-        invitesError.message
-      )
-    } else {
-      pendingInvites = inviteRows || []
-    }
+  if (invitesError) {
+    // Expected until supabase/migrations/00003_company_invites.sql is applied.
+    console.error(
+      'Employer pending invites error:',
+      invitesError.message
+    )
+    pendingInvites = []
   }
 
   return (

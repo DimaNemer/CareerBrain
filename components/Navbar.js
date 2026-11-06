@@ -12,6 +12,7 @@ import { theme } from '@/constants/colors'
 export default function Navbar({
   isLoggedIn = false,
   role = null,
+  userId = null,
 }) {
   const [open, setOpen] = useState(false)
  
@@ -190,7 +191,10 @@ export default function Navbar({
           </div>
 
           {/* Mounted once, visible on every screen size */}
-          <NotificationBellWrapper />
+          <NotificationBellWrapper
+            key={userId || 'anonymous'}
+            initialUserId={userId}
+          />
 
           <div className="md:hidden">
             {hamburger}

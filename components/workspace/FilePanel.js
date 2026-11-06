@@ -163,12 +163,12 @@ const [newNote, setNewNote] = useState({
   async function deleteNote(noteId) {
     if (!confirm('Delete this note?')) return
 
-    setNotes(prev => prev.filter(n => n.id !== noteId))
-
     try {
-      await fetch(`/api/projects/${projectId}/notes?noteId=${noteId}`, {
+      const res = await fetch(`/api/projects/${projectId}/notes?noteId=${noteId}`, {
         method: 'DELETE',
       })
+      if (!res.ok) throw new Error('Failed to delete note')
+      setNotes(prev => prev.filter(n => n.id !== noteId))
     } catch {
       setError('Failed to delete note')
     }
@@ -177,12 +177,12 @@ const [newNote, setNewNote] = useState({
   async function handleDelete(fileId) {
     if (!confirm('Delete this file?')) return
 
-    setFiles(prev => prev.filter(f => f.id !== fileId))
-
     try {
-      await fetch(`/api/projects/${projectId}/files?fileId=${fileId}`, {
+      const res = await fetch(`/api/projects/${projectId}/files?fileId=${fileId}`, {
         method: 'DELETE',
       })
+      if (!res.ok) throw new Error('Failed to delete file')
+      setFiles(prev => prev.filter(f => f.id !== fileId))
     } catch {
       setError('Failed to delete file')
     }

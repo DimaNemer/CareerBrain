@@ -238,37 +238,47 @@ export default function OpportunitiesPage() {
       } catch (err) { setError(err.message) }
       finally { setLoading(false) }
     }
-    async function loadSaved() {
+    load()
+  }, [router, sortBy])
+
+  useEffect(() => {
+    async function loadUserOpportunityState() {
       try {
-        const res = await fetch('/api/opportunities/saved')
-        if (res.ok) {
-          const data = await res.json()
+        const [savedRes, appliedRes, recommendationsRes] =
+          await Promise.all([
+            fetch('/api/opportunities/saved'),
+            fetch('/api/opportunities/applied'),
+            fetch('/api/opportunities/recommendations?limit=5'),
+          ])
+
+        if (savedRes.ok) {
+          const data = await savedRes.json()
           setSavedJobIds(new Set((data.opportunities || []).map(j => j.id)))
         }
-      } catch {}
-    }
-    async function loadApplied() {
-      try {
-        const res = await fetch('/api/opportunities/applied')
-        if (res.ok) {
-          const data = await res.json()
+
+        if (appliedRes.ok) {
+          const data = await appliedRes.json()
           setAppliedJobIds(new Set((data.applied || []).map(j => j.opportunity_id)))
+        }
+
+        if (recommendationsRes.ok) {
+          const data = await recommendationsRes.json()
+          if (data?.opportunities) setRecsTopPicks(data.opportunities)
         }
       } catch {}
     }
-    load(); loadSaved(); loadApplied()
-    // Auto-load Picks (top 5 matches)
-    fetch('/api/opportunities/recommendations?limit=5')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.opportunities) setRecsTopPicks(data.opportunities) })
-      .catch(() => {})
+
+    loadUserOpportunityState()
+  }, [])
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false)
       if (sortRef.current && !sortRef.current.contains(e.target)) setShowSortMenu(false)
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [router, sortBy])
+  }, [])
 
   useEffect(() => { const t = setTimeout(() => updateIndicator(activeTab), 100); return () => clearTimeout(t) }, [opportunities, activeTab, updateIndicator])
 

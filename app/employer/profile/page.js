@@ -14,47 +14,47 @@ export default async function EmployerProfilePage() {
     redirect('/login')
   }
 
-const {
-  data: profile,
-  error: profileError,
-} = await supabase
-  .from('profiles')
-  .select(`
-    id,
-    full_name,
-    username,
-  `)
-  .eq('id', user.id)
-  .single()
+const [
+  { data: profile, error: profileError },
+  { data: membership, error: membershipError },
+] = await Promise.all([
+  supabase
+    .from('profiles')
+    .select(`
+      id,
+      full_name,
+      username,
+    `)
+    .eq('id', user.id)
+    .single(),
+  supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name,
+        slug,
+        logo_url,
+        description,
+        industry,
+        company_size,
+        location,
+        website,
+        company_values,
+        company_benefits
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle(),
+])
+
 if (profileError || !profile) {
   redirect('/dashboard')
 }
-const {
-  data: membership,
-  error: membershipError,
-} = await supabase
-  .from('company_members')
-  .select(`
-    company_id,
-    role,
-    job_title,
-    companies (
-      id,
-      name,
-      slug,
-      logo_url,
-      description,
-      industry,
-      company_size,
-      location,
-      website,
-      company_values,
-      company_benefits
-    )
-  `)
-  .eq('user_id', user.id)
-  .eq('is_current', true)
-  .maybeSingle()
 
 if (membershipError || !membership) {
   redirect('/employer/dashboard')

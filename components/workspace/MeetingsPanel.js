@@ -7,6 +7,7 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
   const [meetings, setMeetings] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [savingMeeting, setSavingMeeting] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     title: '',
@@ -32,7 +33,10 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
 
   async function handleCreate(e) {
     e.preventDefault()
+    if (savingMeeting) return
+
     setError('')
+    setSavingMeeting(true)
 
     try {
       const res = await fetch(`/api/projects/${projectId}/meetings`, {
@@ -55,16 +59,20 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
       setCreating(false)
     } catch {
       setError('Something went wrong')
+    } finally {
+      setSavingMeeting(false)
     }
   }
 
   async function handleDelete(meetingId) {
     if (!confirm('Delete this meeting?')) return
-    setMeetings(prev => prev.filter(m => m.id !== meetingId))
+
     try {
-      await fetch(`/api/projects/${projectId}/meetings?meetingId=${meetingId}`, {
+      const res = await fetch(`/api/projects/${projectId}/meetings?meetingId=${meetingId}`, {
         method: 'DELETE',
       })
+      if (!res.ok) throw new Error('Failed to delete meeting')
+      setMeetings(prev => prev.filter(m => m.id !== meetingId))
     } catch {
       setError('Failed to delete meeting')
     }
@@ -199,9 +207,9 @@ export default function MeetingsPanel({ projectId, currentUserId, isOwner }) {
               style={{ padding: '8px 14px', background: 'none', border: `1px solid ${theme.border.light}`, borderRadius: '8px', fontSize: '13px', cursor: 'pointer', color: theme.text.secondary }}>
               Cancel
             </button>
-            <button type="submit"
+            <button type="submit" disabled={savingMeeting}
               style={{ padding: '8px 16px', background: theme.action.primary, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-              Schedule
+              {savingMeeting ? 'Scheduling...' : 'Schedule'}
             </button>
           </div>
         </form>

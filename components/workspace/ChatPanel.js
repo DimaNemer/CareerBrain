@@ -13,6 +13,7 @@ export default function ChatPanel({ projectId, currentUserId }) {
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const lastMessageIdRef = useRef(null)
+  const realtimeConnectedRef = useRef(false)
 
   // Load message history
  useEffect(() => {
@@ -79,12 +80,13 @@ export default function ChatPanel({ projectId, currentUserId }) {
         }
       )
       .subscribe((status) => {
-        console.log('Realtime status:', status)
+        realtimeConnectedRef.current = status === 'SUBSCRIBED'
       })
 
-    // Polling fallback — every 3 seconds check for new messages
-    // This ensures messages appear even if realtime fails
+    // Keep polling only as a fallback when the realtime channel is unavailable.
     const pollInterval = setInterval(async () => {
+      if (realtimeConnectedRef.current) return
+
       try {
         const res = await fetch(`/api/projects/${projectId}/messages`)
         const data = await res.json()
@@ -99,9 +101,10 @@ export default function ChatPanel({ projectId, currentUserId }) {
       } catch {
         // Silent fail for polling
       }
-    }, 3000)
+    }, 15000)
 
     return () => {
+      realtimeConnectedRef.current = false
       supabase.removeChannel(channel)
       clearInterval(pollInterval)
     }

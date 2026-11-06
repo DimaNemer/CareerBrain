@@ -21,127 +21,128 @@ export default async function PrivateProfilePage() {
     redirect('/login')
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      user_skills (
-        id,
-        proficiency_level,
-        proficiency_score,
-        evidence,
-        source,
-        skills (
+  const [
+    { data: profile, error: profileError },
+    { data: certificates = [] },
+    { data: ownedProjects = [] },
+    { data: joinedProjects = [] },
+    { data: posts = [] },
+    { data: applications = [], error: applicationsError },
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select(`
+        *,
+        user_skills (
           id,
-          name,
-          category
+          proficiency_level,
+          proficiency_score,
+          evidence,
+          source,
+          skills (
+            id,
+            name,
+            category
+          )
         )
-      )
-    `)
-    .eq('id', user.id)
-    .single()
-
-  if (profileError) {
-    console.error('Private profile error:', profileError)
-
-  }
-
-  const { data: certificates = [] } = await supabase
-    .from('user_certificates')
-    .select(`
-      id,
-      name,
-      issuing_organization,
-      issue_date,
-      expiration_date,
-      credential_id,
-      credential_url
-    `)
-    .eq('user_id', user.id)
-    .order('issue_date', {
-      ascending: false,
-      nullsFirst: false,
-    })
-
-  const { data: ownedProjects = [] } = await supabase
-    .from('projects')
-    .select(`
-      id,
-      title,
-      description,
-      status,
-      created_at
-    `)
-    .eq('owner_id', user.id)
-    .is('deleted_at', null)
-    .order('created_at', {
-      ascending: false,
-    })
-
-  const { data: joinedProjects = [] } = await supabase
-    .from('project_members')
-    .select(`
-      role_in_project,
-      joined_at,
-      projects (
+      `)
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('user_certificates')
+      .select(`
+        id,
+        name,
+        issuing_organization,
+        issue_date,
+        expiration_date,
+        credential_id,
+        credential_url
+      `)
+      .eq('user_id', user.id)
+      .order('issue_date', {
+        ascending: false,
+        nullsFirst: false,
+      }),
+    supabase
+      .from('projects')
+      .select(`
         id,
         title,
         description,
         status,
         created_at
-      )
-    `)
-    .eq('user_id', user.id)
-    .is('left_at', null)
-    .order('joined_at', {
-      ascending: false,
-    })
-
-  const { data: posts = [] } = await supabase
-    .from('project_posts')
-    .select(`
-      id,
-      title,
-      content,
-      skills_highlighted,
-      image_url,
-      image_path,
-      created_at,
-      projects (
+      `)
+      .eq('owner_id', user.id)
+      .is('deleted_at', null)
+      .order('created_at', {
+        ascending: false,
+      }),
+    supabase
+      .from('project_members')
+      .select(`
+        role_in_project,
+        joined_at,
+        projects (
+          id,
+          title,
+          description,
+          status,
+          created_at
+        )
+      `)
+      .eq('user_id', user.id)
+      .is('left_at', null)
+      .order('joined_at', {
+        ascending: false,
+      }),
+    supabase
+      .from('project_posts')
+      .select(`
         id,
-        title
-      )
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', {
-      ascending: false,
-    })
+        title,
+        content,
+        skills_highlighted,
+        image_url,
+        image_path,
+        created_at,
+        projects (
+          id,
+          title
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', {
+        ascending: false,
+      }),
+    supabase
+      .from('job_applications')
+      .select(`
+        id,
+        job_id,
+        status,
+        created_at,
+        updated_at,
+        job_postings (
+          id,
+          title,
+          company_name,
+          location,
+          employment_type,
+          experience_level,
+          is_active
+        )
+      `)
+      .eq('applicant_id', user.id)
+      .order('created_at', {
+        ascending: false,
+      }),
+  ])
 
-    const {
-  data: applications = [],
-  error: applicationsError,
-} = await supabase
-  .from('job_applications')
-  .select(`
-    id,
-    job_id,
-    status,
-    created_at,
-    updated_at,
-    job_postings (
-      id,
-      title,
-      company_name,
-      location,
-      employment_type,
-      experience_level,
-      is_active
-    )
-  `)
-  .eq('applicant_id', user.id)
-  .order('created_at', {
-    ascending: false,
-  })
+  if (profileError) {
+    console.error('Private profile error:', profileError)
+
+  }
 
 if (applicationsError) {
   console.error(

@@ -1,4 +1,5 @@
 import './globals.css'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase-server'
 import Navbar from '@/components/Navbar'
 
@@ -8,9 +9,7 @@ export const metadata = {
     'Know where you stand. Close the gap. Build with a team.',
 }
 
-export default async function RootLayout({
-  children,
-}) {
+async function AuthenticatedNavbar() {
   const supabase = await createClient()
 
   const {
@@ -33,13 +32,28 @@ export default async function RootLayout({
   }
 
   return (
+    <Navbar
+      isLoggedIn={Boolean(user)}
+      role={profile?.role || null}
+      userId={user?.id || null}
+    />
+  )
+}
+
+export default function RootLayout({ children }) {
+  return (
     <html lang="en">
       <body>
-        <Navbar
-          isLoggedIn={Boolean(user)}
-          role={profile?.role || null}
-        />
-
+        <Suspense
+          fallback={
+            <div
+              className="h-[60px] border-b border-slate-200 bg-white"
+              aria-hidden="true"
+            />
+          }
+        >
+          <AuthenticatedNavbar />
+        </Suspense>
         {children}
       </body>
     </html>

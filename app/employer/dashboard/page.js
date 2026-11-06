@@ -13,45 +13,44 @@ export default async function EmployerDashboardPage() {
     redirect('/login')
   }
 
- const { data: profile, error: profileError } = await supabase
-  .from('profiles')
-  .select(`
-    full_name,
-    username,
-    role
-  `)
-  .eq('id', user.id)
-  .single()
+ const [
+  { data: profile, error: profileError },
+  { data: membership, error: membershipError },
+ ] = await Promise.all([
+  supabase
+    .from('profiles')
+    .select(`
+      full_name,
+      username,
+      role
+    `)
+    .eq('id', user.id)
+    .single(),
+  supabase
+    .from('company_members')
+    .select(`
+      company_id,
+      role,
+      job_title,
+      companies (
+        id,
+        name,
+        slug,
+        logo_url,
+        industry,
+        company_size,
+        location,
+        website
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('is_current', true)
+    .maybeSingle(),
+ ])
 
   if (profileError || !profile) {
     redirect('/dashboard')
   }
-
- 
-
-  const {
-  data: membership,
-  error: membershipError,
-} = await supabase
-  .from('company_members')
-  .select(`
-    company_id,
-    role,
-    job_title,
-    companies (
-      id,
-      name,
-      slug,
-      logo_url,
-      industry,
-      company_size,
-      location,
-      website
-    )
-  `)
-  .eq('user_id', user.id)
-  .eq('is_current', true)
-  .maybeSingle()
 
   if (membershipError) {
   console.error(

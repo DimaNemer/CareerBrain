@@ -20,172 +20,171 @@ const backUrl =
     ? resolvedSearchParams.from
     : '/projects'
 
-  const { data: profile, error } = await publicSupabase
-    .from('profiles')
-   .select(`
-  id,
-  username,
-  full_name,
-  headline,
-  avatar_url,
-  bio,
-  location,
-  role,
-  education_level,
-  university,
-  graduation_year,
-  major,
-  linkedin_url,
-  github_url,
-  portfolio_url,
-  user_skills (
-    proficiency_level,
-    source,
-    skills (
-      name,
-      category
-    )
-  )
-`)
-    .eq('id', id)
-    .single()
+  const [
+    { data: profile, error },
+    { data: experiences = [], error: experienceError },
+    { data: currentMembership, error: membershipError },
+    { data: memberCompleted },
+    { data: ownedCompleted },
+    { data: certificates = [] },
+    { data: posts },
+    { data: { user: viewer } },
+  ] = await Promise.all([
+    publicSupabase
+      .from('profiles')
+      .select(`
+        id,
+        username,
+        full_name,
+        headline,
+        avatar_url,
+        bio,
+        location,
+        role,
+        education_level,
+        university,
+        graduation_year,
+        major,
+        linkedin_url,
+        github_url,
+        portfolio_url,
+        user_skills (
+          proficiency_level,
+          source,
+          skills (
+            name,
+            category
+          )
+        )
+      `)
+      .eq('id', id)
+      .single(),
+    publicSupabase
+      .from('profile_experience')
+      .select(`
+        id,
+        company_id,
+        company_name,
+        job_title,
+        location,
+        start_date,
+        end_date,
+        is_current,
+        description,
+        companies (
+          id,
+          name,
+          logo_url
+        )
+      `)
+      .eq('user_id', id)
+      .order('is_current', {
+        ascending: false,
+      })
+      .order('start_date', {
+        ascending: false,
+      }),
+    publicSupabase
+      .from('company_members')
+      .select(`
+        company_id,
+        job_title,
+        role,
+        companies (
+          id,
+          name,
+          logo_url,
+          industry,
+          location
+        )
+      `)
+      .eq('user_id', id)
+      .eq('is_current', true)
+      .maybeSingle(),
+    supabase
+      .from('project_members')
+      .select(`
+        role_in_project, joined_at,
+        projects (
+          id, title, description, status,
+          project_roles ( role_title, skills ( name ) )
+        )
+      `)
+      .eq('user_id', id)
+      .is('left_at', null),
+    supabase
+      .from('projects')
+      .select(`
+        id, title, description, status,
+        project_roles ( role_title, skills ( name ) )
+      `)
+      .eq('owner_id', id)
+      .eq('status', 'completed')
+      .is('deleted_at', null),
+    supabase
+      .from('user_certificates')
+      .select(`
+        id,
+        name,
+        issuing_organization,
+        issue_date,
+        expiration_date,
+        credential_id,
+        credential_url
+      `)
+      .eq('user_id', id)
+      .order('issue_date', {
+        ascending: false,
+        nullsFirst: false,
+      }),
+    supabase
+      .from('project_posts')
+      .select(`
+        id,
+        title,
+        content,
+        skills_highlighted,
+        image_url,
+        created_at,
+        projects (
+          id,
+          title
+        )
+      `)
+      .eq('user_id', id)
+      .order('created_at', {
+        ascending: false,
+      }),
+    supabase.auth.getUser(),
+  ])
 
   if (error || !profile) notFound()
-const {
-  data: experiences = [],
-  error: experienceError,
-} = await publicSupabase
-  .from('profile_experience')
-  .select(`
-    id,
-    company_id,
-    company_name,
-    job_title,
-    location,
-    start_date,
-    end_date,
-    is_current,
-    description,
-    companies (
-      id,
-      name,
-      logo_url
-    )
-  `)
-  .eq('user_id', id)
-  .order('is_current', {
-    ascending: false,
-  })
-  .order('start_date', {
-    ascending: false,
-  })
 
-if (experienceError) {
-  console.error(
-    'Profile experience error:',
-    experienceError.message
-  )
-}
-  const { data: { user: viewer } } = await supabase.auth.getUser()
+  if (experienceError) {
+    console.error(
+      'Profile experience error:',
+      experienceError.message
+    )
+  }
+
   const isOwnProfile = viewer?.id === id
 
   if (viewer && viewer.id !== id) {
     sendProfileViewNotification({ profileOwnerId: id, viewerId: viewer.id })
   }
-const {
-  data: currentMembership,
-  error: membershipError,
-} = await publicSupabase
-  .from('company_members')
-  .select(`
-    company_id,
-    job_title,
-    role,
-    companies (
-      id,
-      name,
-      logo_url,
-      industry,
-      location
-    )
-  `)
-  .eq('user_id', id)
-  .eq('is_current', true)
-  .maybeSingle()
 
-if (membershipError) {
-  console.error(
-    'Profile company membership error:',
-    membershipError.message
-  )
-}
+  if (membershipError) {
+    console.error(
+      'Profile company membership error:',
+      membershipError.message
+    )
+  }
 
 const currentCompany = Array.isArray(
   currentMembership?.companies
 )
   ? currentMembership.companies[0]
   : currentMembership?.companies
-  // Completed projects as member
-  const { data: memberCompleted } = await supabase
-    .from('project_members')
-    .select(`
-      role_in_project, joined_at,
-      projects (
-        id, title, description, status,
-        project_roles ( role_title, skills ( name ) )
-      )
-    `)
-    .eq('user_id', id)
-    .is('left_at', null)
-
-  // Completed projects as owner
-  const { data: ownedCompleted } = await supabase
-    .from('projects')
-    .select(`
-      id, title, description, status,
-      project_roles ( role_title, skills ( name ) )
-    `)
-    .eq('owner_id', id)
-    .eq('status', 'completed')
-    .is('deleted_at', null)
-
-    //certificate
-    const { data: certificates = [] } = await supabase
-  .from('user_certificates')
-  .select(`
-    id,
-    name,
-    issuing_organization,
-    issue_date,
-    expiration_date,
-    credential_id,
-    credential_url
-  `)
-  .eq('user_id', id)
-  .order('issue_date', {
-    ascending: false,
-    nullsFirst: false,
-  })
-
-  // Posts
-const { data: posts } = await supabase
-  .from('project_posts')
-  .select(`
-    id,
-    title,
-    content,
-    skills_highlighted,
-    image_url,
-    created_at,
-    projects (
-      id,
-      title
-    )
-  `)
-  .eq('user_id', id)
-  .order('created_at', {
-    ascending: false,
-  })
 
   const skills = profile.user_skills || []
   const verifiedSkills = skills.filter(s => s.source === 'Project')
